@@ -1,0 +1,70 @@
+# one thing I'd really like to be able to do is make it easy to insert new map elements (referred to from here on as nodes)
+# this is an example of something I'd like to work up, and liable to change, but should help structure the writing
+# at game creation, this file will be read in by the game and used to populate the map
+
+# first, each node is delimited by curley brackets: {}
+# elements within each node are delimited by square brackets: []
+# Immediately after the opening square bracket is the name of the field
+# after that, is any flavor text you want to include.
+# the game will strip out newline characters when parsing this, so make it readable however works best for you
+
+# I'll set up a distinction here between newlines and pages
+# A page will be when you want to wipe everything off the screen and start fresh
+# A newline will be when you want to make a new paragraph within the page.
+# Newlines will be denoted by ==== - when the game sees that string of characters, it will typeset a new line
+# Page Breaks will be denoted by **** - when the game sees that, it will wipe the screen blank and start typesetting fresh
+
+# Player descriptions will be denoted by @@, such as:
+# "The mosnter strikes your skull, staining your @hairColour@ hair with your blood.
+
+# Each node will have a "story" to it - it's the way of setting story event flags
+# Stories will not be stored in the Node itself, but stored as their own units in another file.
+# This lets me use the same markup I've used here, but without the crazy stupid markup
+# Just a simple one-room non-story node would have an implicit story of "it exists"
+# Stories are made up of three necessary elements: the prerequisite, the content, and the effect
+# Story element design is going to be complicated, so see the template for a better walkthrough
+# The story element effect section is pretty much the only place where you're going to have to approach real code, but I'll try to keep it simple
+# If you name a node flag, it'll turn that flag to 1, or on. (or maybe flip it, dunno)
+# You can also change an NPC trait - this will be done by calling the appropriate method related to the NPC's object, so it will be something like NPC.levelup() or NPC.setcondition(poisoned=1)
+
+# NPCs will all have a "home" node - it's where their story flags are kept.
+# The game will use the supplied NPC name as 
+# In order to keep things not-cluttered here, just give hte NPC name, and the NPC data will be supplied in a separate (similar) file
+
+{ # start node
+[Node_Name:
+Dungeon
+]
+
+[Descriptive_Text:
+****A damp, chilly dungeon
+====You don't really like it here.
+]
+
+[Flags:
+Test1=1,
+Test2=4,
+NPC_story1=1
+NPC_story2=0
+NPC_story3=0
+]
+
+[Story:
+$ # begin story element 1
+^Req_NPCs=NPC1,NPC2 ^
+^Req_On_Flags=Test1,NPC_story1^
+^Story_Content:
+Flavor Text is great! Let's make a new line like so ====
+wasn't that great? now let's make a new page **** neat, huh? ^
+^Story_Effects: NPC1.strengthincrease(1),NPC_story2 ^
+% # end story element 1
+
+$ # begin story element 1
+% # end story element 1
+]
+
+[NPCs:
+]
+} # end node
+
+NPCs will all have a "home" node - it's where their story flags are kept.

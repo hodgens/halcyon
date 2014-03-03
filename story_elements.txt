@@ -1,0 +1,8 @@
+{ # start node
+[Node_Name:
+Dungeon
+]
+[Prerequisites:]
+[Story_Content:]
+[Effects:]
+} # end node
