@@ -26,6 +26,12 @@ KEY_COMMAND_STATUS = {K_w:"open", K_a:"open", K_s:"open", K_d:"open", K_q:"open"
 # Since we're going to be making multiple types of buttons, with multiple instances of each type,
 # let's make a settings class we can plug into the buttons module
 # to make a new button, you just specify the settings object and give it text and x,y position (top left corner)
+
+# Let's start up the font object
+pygame.font.init()
+Text_font = pygame.font.SysFont("C:\Windows\Fonts\04B_19_.TTF",FONT_SIZE)
+
+# this class will define the settings for buttons, so settings can be reused easily
 class Settings:
 	def __init__(self, width, height, open_color, set_color, background_color, border_width):
 		self.width = width
@@ -35,8 +41,10 @@ class Settings:
 		self.background_color = background_color
 		self.border_width = border_width
 
+# this class takes the settings and actually sets up where the buttons are and what they say
 class Button:
 	def __init__(self, x_pos = None, y_pos = None, button_settings = None, text = None, action = None):
+		# for readability, I'm going to move the settings from the settings object into this object
 		self.button_settings = button_settings
 		self.text = text
 		self.width = self.button_settings.width
@@ -54,11 +62,15 @@ class Button:
 			self.button_surface = pygame.Surface((self.width,self.height))
 			self.button_surface.fill(self.background_color)
 			self.button_surface.fill(self.open_color,(self.border_width, self.border_width, self.width - self.border_width, self.height - self.border_width))
+		if self.text is not None:
+			# draw the text on the button
+			self.button_text_image = Text_font.render(text,1,self.background_color)
+			self.button_surface.blit(self.button_text_image,[1,1])
 	def set_state(self,state):
 		x=1
 		# switch state from open to set, if applicable
 
-		
+# this class holds all the information about the different environment nodes and the connected story content	
 class MapNode:
 	def __init__(self):
 		self.Node_contents = None # for storing all the original specifications of the Node
@@ -99,11 +111,13 @@ class MapNode:
 				#append
 				current_node = ""
 			# the above will only happen if the current line ends the story element delcaration
-			
+
+# this class will be used to set what the playstyles of the NPCs are			
 class AI_settings:
 	def __init__(self, style):
 		self.style=style
-			
+
+# this class holds the information about where the NPCs are and what they're holding and how to move them		
 class Character:
 	def __init__(self, location, AI_component = None):
 		self.location = location
@@ -113,7 +127,8 @@ class Character:
 		# check that route between current and new location exists
 		# add character to list of characters in the new location
 		# remove character from list of characters in old location
-			
+
+# this function will read in the environment nodes and store them as code objects
 def parse_node_file(file, node_storage):
 	# read in file
 	# go through the file, parse out the different node contents
@@ -149,6 +164,7 @@ def parse_node_file(file, node_storage):
 # and then when you release, they turn Color3 (light blue?) to signify that that button is set to send
 # once you submit the command for that round, the buttons reset to normal
 
+# this is hte settings for regular UI interaction buttons
 direction_combat_button_settings = Settings(width=BUTTON_WIDTH, height = BUTTON_HEIGHT, open_color = BUTTON_OPEN_COLOR, set_color = BUTTON_SET_COLOR, background_color = BUTTON_BACKGROUND_COLOR, border_width = BUTTON_BORDER_WIDTH)
 
 w_button = Button(x_pos = 1, y_pos = 1, button_settings = direction_combat_button_settings, text = "w")
