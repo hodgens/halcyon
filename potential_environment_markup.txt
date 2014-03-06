@@ -20,6 +20,7 @@
 # Each node will have a "story" to it - it's the way of setting story event flags
 # Stories will not be stored in the Node itself, but stored as their own units in another file.
 # This lets me use the same markup I've used here, but without the crazy stupid markup
+# This should also let me start up the game environment without actually running story, for a debug mode
 # Just a simple one-room non-story node would have an implicit story of "it exists"
 # Stories are made up of three necessary elements: the prerequisite, the content, and the effect
 # Story element design is going to be complicated, so see the template for a better walkthrough
