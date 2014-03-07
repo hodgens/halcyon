@@ -43,7 +43,7 @@ class Settings:
 
 # this class takes the settings and actually sets up where the buttons are and what they say
 class Button:
-	def __init__(self, x_pos = None, y_pos = None, button_settings = None, text = None, action = None):
+	def __init__(self, x_pos = None, y_pos = None, button_settings = None, text = None, action = None,pygame_text_number = None):
 		# for readability, I'm going to move the settings from the settings object into this object
 		self.button_settings = button_settings
 		self.text = text
@@ -56,8 +56,9 @@ class Button:
 		self.current_color = self.open_color
 		self.x_pos = x_pos
 		self.y_pos = y_pos
-		self.button_settings = None # how big is it, what color is it, that stuff
+		self.button_settings = button_settings # how big is it, what color is it, that stuff
 		self.action = action # the function the button performs when it's pressed by the user
+		self.pygame_text_number = pygame_text_number
 		
 		if self.width is not None and self.height is not None and self.open_color is not None and self.background_color is not None and self.border_width is not None:
 			self.button_surface = pygame.Surface((self.width,self.height))
@@ -77,16 +78,20 @@ class Button:
 			self.button_text_image = Text_font.render(self.text,1,self.background_color)
 			self.button_surface.blit(self.button_text_image,[self.width/2,self.height/2])
 		main_screen.blit(self.button_surface,(self.x_pos,self.y_pos))
-			
+		for each_key in KEY_COMMAND_STATUS:
+			KEY_COMMAND_STATUS[each_key] = "open"
+		KEY_COMMAND_STATUS[self.pygame_text_number] = "set"
+		
 	def change_status(self, new_status):
 		if new_status == "set":
 			self.current_color = self.set_color
 		if new_status == "open":
 			self.current_color = self.open_color
 		self.draw_self()
-		
 
-# this class holds all the information about the different environment nodes and the connected story content	
+	def perform_action():
+		z=1
+		
 class MapNode:
 	def __init__(self):
 		self.Node_contents = None # for storing all the original specifications of the Node
@@ -127,6 +132,9 @@ class MapNode:
 				#append
 				current_node = ""
 			# the above will only happen if the current line ends the story element delcaration
+	def get_most_recent_story(self):
+		# get the most recent story event so you can display it
+		x=1
 
 # this class will be used to set what the playstyles of the NPCs are			
 class AI_settings:
@@ -146,15 +154,8 @@ class Character:
 
 # this function will read in the environment nodes and store them as code objects
 def parse_node_file(file, node_storage):
-	# read in file
 	# go through the file, parse out the different node contents
-	# create a new node object appropriately
-	# add the node object to the list
-	
-	# create a new Node object when you first hit the node opening bracket
-	# assign it to a current working node
-	# progress through the Node specification
-	# move node to list of finished nodes when you reace the node closing bracket
+	# create a new node object appropriately, add the node object to the list
 	
 	for line in file:
 		# if you see a new node start
@@ -183,6 +184,7 @@ def parse_node_file(file, node_storage):
 # this is hte settings for regular UI interaction buttons
 direction_combat_button_settings = Settings(width=BUTTON_WIDTH, height = BUTTON_HEIGHT, open_color = BUTTON_OPEN_COLOR, set_color = BUTTON_SET_COLOR, background_color = BUTTON_BACKGROUND_COLOR, border_width = BUTTON_BORDER_WIDTH)
 
+# TODO: ADD IN COMBAT TEXT, HAVE BUTTON DRAWING CHECK THE TEXT AND USE THE APPROPRIATE ONE
 w_button = Button(x_pos = 1, y_pos = 1, button_settings = direction_combat_button_settings, text = "w")
 
 a_button = Button(x_pos = 20, y_pos = 20, button_settings = direction_combat_button_settings, text = "a")
@@ -190,6 +192,8 @@ a_button = Button(x_pos = 20, y_pos = 20, button_settings = direction_combat_but
 s_button = Button(x_pos = 40, y_pos = 40, button_settings = direction_combat_button_settings, text = "s")
 
 d_button = Button(x_pos = 60, y_pos = 60, button_settings = direction_combat_button_settings, text = "d")
+
+q_button = Button(x_pos = 80, y_pos = 80, button_settings = direction_combat_button_settings, text = "q")
 	
 # main strategy for game handling:
 # tasks in map node:
@@ -212,14 +216,42 @@ d_button = Button(x_pos = 60, y_pos = 60, button_settings = direction_combat_but
 # find the youngest unlocked story element, display it (unless it has a display_once flag set)
 # if there are none, default to the basic node description
 
+game_mode = 0
 combat_mode = 0
 map_mode = 1
+player_ready = 0
 
 # the main loop just polls the keyboard for events
 # it calls the appropriate button based on the key input
 # it's agnostic to what the buttons actually do or what's being displayed on screen
 # the buttons call handler functions that perform the proper actions mased on checking the combat_mode and map_mode flags
 
+def combat_turn(player, enemy, action)
+	if combat_mode == 0:
+		return None
+	if combat_mode == 1 and player_ready == 1:
+		# perform combat calculations
+		
+		# determine who has initiative (based on dexterity/strength relative to weapon)
+		# apply damage, effects from weapon as appropriate
+		# do the same for the other party
+	else:
+		return None
+
+def map_turn(player,action):
+	if map_mode == 0:
+		return None
+	if action == "move":
+		#move player
+	elif action == "examine" and target is None:
+		#examine the map node
+	elif action == "examine" and target is not None:
+		#examine an object
+	elif action == "inventory":
+		#open inventory menu
+
+
+		
 while exit_status is 0:
 	next_event = pygame.event.poll()
 	if next_event == pygame.NOEVENT:
@@ -229,9 +261,43 @@ while exit_status is 0:
 	if next_event.type == KEYDOWN and next_event.key == K_c:
 		center_box.fill((100,200,100))
 		main_screen.blit(center_box, (0,0))
+	if next_event.type == KEYDOWN and next_event.key == K_w:
+		w_button.change_status("set")
+		if map_mode == 1:
+			action = "move_up"
+		elif combat_mode == 1:
+			action="light_attack"
+	if next_event.type == KEYDOWN and next_event.key == K_a:
+		a_button.change_status("set")
+		action = "move_left"	
 	if next_event.type == KEYDOWN and next_event.key == K_s:
-		KEY_COMMAND_STATUS[K_s] = "set"
 		s_button.change_status("set")
+		if map_mode == 1:
+			action = "move_down"
+		elif combat_mode == 1:
+			action = "heavy_attack"
+	if next_event.type == KEYDOWN and next_event.key == K_d:
+		d_button.change_status("set")
+		action = "move_right"	
+	if next_event.type == KEYDOWN and next_event.key == K_q and combat_mode == 1:
+		q_button.change_status("set")
+		action = "block"
+	if next_event.type == KEYDOWN and next_event.key == K_e and combat_mode == 1:
+		e_button.change_status("set")
+		action = "parry"
+		
+	if next_event.type == KEYDOWN and next_event.key == K_x:
+		action = "examine_node"
+		# call .get_most_recent_story(current_node) on the node
+
+		
+	if map_mode is 1 and combat_mode is 0:
+		map_turn(player,action)
+		draw_screen("map_mode")
+	elif combat_mode is 1 and map_mode is 0:
+		combat_turn(player,enemy,action)	
+		draw_screen("combat_mode")
+		
 		
 	pygame.display.flip() #flip updates the main_screen to the actual displayscreen
 
