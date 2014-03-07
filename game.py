@@ -9,8 +9,8 @@ from settings import *
 
 main_screen = pygame.display.set_mode( [SCREEN_WIDTH, SCREEN_HEIGHT] )
 exit_status = 0 # for quitting the main loop
-center_box = pygame.Surface((20,20))
-center_box.fill((100,125,255))
+center_box = pygame.Surface([SCREEN_WIDTH, SCREEN_HEIGHT])
+center_box.fill((255,255,255))
 main_screen.blit(center_box, (0,0))
 
 # now for the actual Halcyon stuff
@@ -53,6 +53,7 @@ class Button:
 		self.set_color = self.button_settings.set_color
 		self.background_color = self.button_settings.background_color
 		self.border_width = self.button_settings.border_width
+		self.current_color = self.open_color
 		self.x_pos = x_pos
 		self.y_pos = y_pos
 		self.button_settings = None # how big is it, what color is it, that stuff
@@ -61,14 +62,29 @@ class Button:
 		if self.width is not None and self.height is not None and self.open_color is not None and self.background_color is not None and self.border_width is not None:
 			self.button_surface = pygame.Surface((self.width,self.height))
 			self.button_surface.fill(self.background_color)
-			self.button_surface.fill(self.open_color,(self.border_width, self.border_width, self.width - self.border_width, self.height - self.border_width))
+			self.button_surface.fill(self.current_color,(self.border_width, self.border_width, self.width - 2* self.border_width, self.height - 2* self.border_width))
+		# add text
 		if self.text is not None:
 			# draw the text on the button
 			self.button_text_image = Text_font.render(text,1,self.background_color)
-			self.button_surface.blit(self.button_text_image,[1,1])
-	def set_state(self,state):
-		x=1
-		# switch state from open to set, if applicable
+			self.button_surface.blit(self.button_text_image,[self.width/2,self.height/2])
+		main_screen.blit(self.button_surface,(self.x_pos,self.y_pos))
+	def draw_self(self):
+		# redraw the button.
+		self.button_surface.fill(self.current_color,(self.border_width, self.border_width, self.width - 2* self.border_width, self.height - 2* self.border_width))
+		# add text
+		if self.text is not None:
+			self.button_text_image = Text_font.render(self.text,1,self.background_color)
+			self.button_surface.blit(self.button_text_image,[self.width/2,self.height/2])
+		main_screen.blit(self.button_surface,(self.x_pos,self.y_pos))
+			
+	def change_status(self, new_status):
+		if new_status == "set":
+			self.current_color = self.set_color
+		if new_status == "open":
+			self.current_color = self.open_color
+		self.draw_self()
+		
 
 # this class holds all the information about the different environment nodes and the connected story content	
 class MapNode:
@@ -203,6 +219,7 @@ map_mode = 1
 # it calls the appropriate button based on the key input
 # it's agnostic to what the buttons actually do or what's being displayed on screen
 # the buttons call handler functions that perform the proper actions mased on checking the combat_mode and map_mode flags
+
 while exit_status is 0:
 	next_event = pygame.event.poll()
 	if next_event == pygame.NOEVENT:
@@ -212,6 +229,9 @@ while exit_status is 0:
 	if next_event.type == KEYDOWN and next_event.key == K_c:
 		center_box.fill((100,200,100))
 		main_screen.blit(center_box, (0,0))
+	if next_event.type == KEYDOWN and next_event.key == K_s:
+		KEY_COMMAND_STATUS[K_s] = "set"
+		s_button.change_status("set")
 		
 	pygame.display.flip() #flip updates the main_screen to the actual displayscreen
 
