@@ -43,10 +43,11 @@ class Settings:
 
 # this class takes the settings and actually sets up where the buttons are and what they say
 class Button:
-	def __init__(self, x_pos = None, y_pos = None, button_settings = None, text = None, action = None,pygame_text_number = None):
+	def __init__(self, x_pos = None, y_pos = None, button_settings = None, map_text = None, combat_text = None action = None, pygame_text_number = None):
 		# for readability, I'm going to move the settings from the settings object into this object
 		self.button_settings = button_settings
-		self.text = text
+		self.map_text = map_text
+		self.combat_text = combat_text
 		self.width = self.button_settings.width
 		self.height = self.button_settings.height
 		self.open_color = self.button_settings.open_color
@@ -68,15 +69,17 @@ class Button:
 		if self.text is not None:
 			# draw the text on the button
 			self.button_text_image = Text_font.render(text,1,self.background_color)
-			self.button_surface.blit(self.button_text_image,[self.width/2,self.height/2])
+			text_dimensions = Text_font.size(self.text)
+			self.button_surface.blit(self.button_text_image,[self.width/2-text_dimensions[0]/2,self.height/2-text_dimensions[1]/2])
 		main_screen.blit(self.button_surface,(self.x_pos,self.y_pos))
 	def draw_self(self):
 		# redraw the button.
 		self.button_surface.fill(self.current_color,(self.border_width, self.border_width, self.width - 2* self.border_width, self.height - 2* self.border_width))
 		# add text
 		if self.text is not None:
+			text_dimensions = Text_font.size(self.text)
 			self.button_text_image = Text_font.render(self.text,1,self.background_color)
-			self.button_surface.blit(self.button_text_image,[self.width/2,self.height/2])
+			self.button_surface.blit(self.button_text_image,[self.width/2-text_dimensions[0]/2,self.height/2-text_dimensions[1]/2])
 		main_screen.blit(self.button_surface,(self.x_pos,self.y_pos))
 		for each_key in KEY_COMMAND_STATUS:
 			KEY_COMMAND_STATUS[each_key] = "open"
@@ -89,8 +92,12 @@ class Button:
 			self.current_color = self.open_color
 		self.draw_self()
 
-	def perform_action():
+	def perform_action(self):
 		z=1
+	
+	def set_mode(self, new_mode):
+		# switch from combat to map mode or vice versa
+		z=2
 		
 class MapNode:
 	def __init__(self):
@@ -146,11 +153,17 @@ class Character:
 	def __init__(self, location, AI_component = None):
 		self.location = location
 		self.AI_component = AI_component
+		self.target = None
+		self.initiative = None
 	def move_character(self, new_location):
 		x=1
 		# check that route between current and new location exists
 		# add character to list of characters in the new location
 		# remove character from list of characters in old location
+	def calc_initiative_target(self, possible_targets):
+		z=1
+		# calculate your initiative based on stats
+		# choose target from possible targets
 
 # this function will read in the environment nodes and store them as code objects
 def parse_node_file(file, node_storage):
@@ -185,15 +198,17 @@ def parse_node_file(file, node_storage):
 direction_combat_button_settings = Settings(width=BUTTON_WIDTH, height = BUTTON_HEIGHT, open_color = BUTTON_OPEN_COLOR, set_color = BUTTON_SET_COLOR, background_color = BUTTON_BACKGROUND_COLOR, border_width = BUTTON_BORDER_WIDTH)
 
 # TODO: ADD IN COMBAT TEXT, HAVE BUTTON DRAWING CHECK THE TEXT AND USE THE APPROPRIATE ONE
-w_button = Button(x_pos = 1, y_pos = 1, button_settings = direction_combat_button_settings, text = "w")
+w_button = Button(x_pos = 255, y_pos = 362, button_settings = direction_combat_button_settings, text = "w")
 
-a_button = Button(x_pos = 20, y_pos = 20, button_settings = direction_combat_button_settings, text = "a")
+a_button = Button(x_pos = 130, y_pos = 393, button_settings = direction_combat_button_settings, text = "a")
 
-s_button = Button(x_pos = 40, y_pos = 40, button_settings = direction_combat_button_settings, text = "s")
+s_button = Button(x_pos = 255, y_pos = 393, button_settings = direction_combat_button_settings, text = "s")
 
-d_button = Button(x_pos = 60, y_pos = 60, button_settings = direction_combat_button_settings, text = "d")
+d_button = Button(x_pos = 375, y_pos = 393, button_settings = direction_combat_button_settings, text = "d")
 
-q_button = Button(x_pos = 80, y_pos = 80, button_settings = direction_combat_button_settings, text = "q")
+q_button = Button(x_pos = 130, y_pos = 362, button_settings = direction_combat_button_settings, text = "q")
+
+f_button = Button(x_pos = 500, y_pos = 393, button_settings = direction_combat_button_settings, text = "f")
 	
 # main strategy for game handling:
 # tasks in map node:
@@ -226,28 +241,32 @@ player_ready = 0
 # it's agnostic to what the buttons actually do or what's being displayed on screen
 # the buttons call handler functions that perform the proper actions mased on checking the combat_mode and map_mode flags
 
-def combat_turn(player, enemy, action)
+def combat_turn(player, combatant_list):
+	# figures out initiative, performs combat
 	if combat_mode == 0:
 		return None
-	if combat_mode == 1 and player_ready == 1:
-		# perform combat calculations
+	elif combat_mode == 1 and player_ready == 1:
+		combat_order = [player]
+		combat_order.extend(combatant_list)
+		sorted_order = sorted(combat_order,key = lambda x: x.calc_initiative_target())
+		for each in sorted_order:
+			each.attack_action(each.target)
 		
-		# determine who has initiative (based on dexterity/strength relative to weapon)
-		# apply damage, effects from weapon as appropriate
-		# do the same for the other party
-	else:
-		return None
-
-def map_turn(player,action):
+		
+def map_turn(player,action, target=None):
 	if map_mode == 0:
 		return None
 	if action == "move":
+		x=1
 		#move player
 	elif action == "examine" and target is None:
+		x=1
 		#examine the map node
 	elif action == "examine" and target is not None:
+		x=2
 		#examine an object
 	elif action == "inventory":
+		x=2
 		#open inventory menu
 
 
@@ -288,15 +307,16 @@ while exit_status is 0:
 		
 	if next_event.type == KEYDOWN and next_event.key == K_x:
 		action = "examine_node"
+		# pop up menu to choose target
 		# call .get_most_recent_story(current_node) on the node
 
 		
-	if map_mode is 1 and combat_mode is 0:
-		map_turn(player,action)
-		draw_screen("map_mode")
-	elif combat_mode is 1 and map_mode is 0:
-		combat_turn(player,enemy,action)	
-		draw_screen("combat_mode")
+	# if map_mode is 1 and combat_mode is 0:
+		# map_turn(player,action)
+		# draw_screen("map_mode")
+	# elif combat_mode is 1 and map_mode is 0:
+		# combat_turn(player,enemy,action)	
+		# draw_screen("combat_mode")
 		
 		
 	pygame.display.flip() #flip updates the main_screen to the actual displayscreen

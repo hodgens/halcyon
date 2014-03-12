@@ -1,0 +1,42 @@
+\documentclass[11pt]{article}
+
+\usepackage{fullpage}
+%\usepackage{upgreek}
+\usepackage[no-math]{fontspec}
+\setmainfont[Ligatures=TeX]{Garamond}
+\usepackage{wasysym}
+\usepackage{cite}
+%\usepackage{amsmath} % for \dfrac
+%\usepackage{nopageno} % what it says on the box
+%\usepackage{xltxtra} % for text super/sub scripts, but loaded by fontspec package anyway
+%\usepackage{graphicx} % for including pictures, see http://en.wikibooks.org/wiki/LaTeX/Importing_Graphics
+\usepackage{booktabs} % for nice tables
+
+\begin{document}
+\title{Halcyon Engine}
+\date{}
+\maketitle{}
+
+\section{Introduction}
+The major design goal driving the development of the Halcyon Engine is the ability to design a story-driven RPG experience while maintaining the option for the end-user to easily modify the game campaign with a minimum of programming experience.
+
+To that end, most of the specification of games themselves is done through user-supplied files with a custom markup.
+On engine start, the user-supplied files are read in and used to create the world map, NPCs, NPC attributes, and story events.
+
+\section{Halcyon: A Series of \strikethrough{Tubes}Nodes}
+The basic conceptual unit used to specify a game for the Halcyon engine is a node.
+A node is delimited by curly brackets and contains several key:value pairs of data which are interpreted by the game engine.
+
+There are several different node types, each with their own required contents.
+Those types are: Story, Map, NPC, and Player.
+The NPC and Player node types are identical in terms of required contents; the separate designation is so that the player character can be easily identified if many different NPC types are specified.
+
+\subsection{Map}
+hi
+\subsection{Story}
+nothing is here yet
+\subsection{NPC and Player}
+neat game though huh?
+\section{Settings}
+you can change them.
+\end{document}

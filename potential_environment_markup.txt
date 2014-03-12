@@ -33,6 +33,7 @@
 # In order to keep things not-cluttered here, just give hte NPC name, and the NPC data will be supplied in a separate (similar) file
 
 { # start node
+[Type:Map]
 [Node_Name:
 Dungeon
 ]
@@ -45,9 +46,9 @@ Dungeon
 [Flags:
 Test1=1,
 Test2=4,
-NPC_story1=1
-NPC_story2=0
-NPC_story3=0
+NPC_story1=1,
+NPC_story2=0,
+NPC_story3=0,
 ]
 
 [Story:

@@ -1,0 +1,19 @@
+{ # start node
+[Type:NPC]
+[Starting_Location:
+Dungeon
+]
+
+[Descriptive_Text:
+****A bored looking skeleton.
+====He doesn't really like it here.
+]
+
+[Flags:]
+
+[Stats:
+Health:10
+Attack:1
+Defense:1
+]
+} # end node
