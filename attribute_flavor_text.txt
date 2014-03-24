@@ -1,0 +1,9 @@
+# First, define the name of the attribute.
+# next, give it a bunch of value:description pairs
+# the flavor text used in-game will be the highest category under your current score.
+# a score of muscle_size in this example of 3 would report the "you don't exist" category
+{[Attribute_Name:Muscle_Size]
+[0:"You don't exist"]
+[5:"are you literally a baby"]
+[10:"how's it feel being ten years old"]
+}

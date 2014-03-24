@@ -1,9 +1,7 @@
 { # start node
 [Type:NPC]
-[Starting_Location:
-Dungeon
-]
-
+[Starting_Location:Dungeon]
+[Name:Skeleton]
 [Descriptive_Text:
 ****A bored looking skeleton.
 ====He doesn't really like it here.

@@ -15,7 +15,7 @@
 # Page Breaks will be denoted by **** - when the game sees that, it will wipe the screen blank and start typesetting fresh
 
 # Player descriptions will be denoted by @@, such as:
-# "The mosnter strikes your skull, staining your @hairColour@ hair with your blood.
+# "The monster strikes your skull, staining your @character;hairColour@ hair with your blood.
 
 # Each node will have a "story" to it - it's the way of setting story event flags
 # Stories will not be stored in the Node itself, but stored as their own units in another file.
