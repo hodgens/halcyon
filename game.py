@@ -22,12 +22,11 @@ map_mode = 1
 player_ready = 0
 
 #environment_file = open(sys.argv[1])
-SAVED_NODES = []
 NPC_LIST = []
-
-# now a dict to store the different command states for the UI
-# "open" means it hasn't been pressed, "set" means it's been pressed, and will be used as the next command on submit
-KEY_COMMAND_STATUS = {K_w:"open", K_a:"open", K_s:"open", K_d:"open", K_q:"open", K_e:"open", K_f:"open"}
+BUTTONS = []
+SCREENS = []
+MAPS = []
+CURRENT_NODE = []
 
 # Start up the font object for text display
 pygame.font.init()
@@ -45,7 +44,7 @@ class Settings:
 
 # this class takes the settings and actually sets up where the buttons are and what they say
 class Button:
-	def __init__(self, x_pos = None, y_pos = None, button_settings = None, map_text = None, combat_text = None action = None, pygame_text_number = None):
+	def __init__(self, x_pos = None, y_pos = None, button_settings = None, map_text = None, combat_text = None, action = None, text = None, pygame_key_id = None):
 		# for readability, I'm going to move the settings from the settings object into this object
 		self.button_settings = button_settings
 		self.map_text = map_text
@@ -61,54 +60,54 @@ class Button:
 		self.y_pos = y_pos
 		self.button_settings = button_settings # how big is it, what color is it, that stuff
 		self.action = action # the function the button performs when it's pressed by the user
-		self.pygame_text_number = pygame_text_number
+		self.pygame_key_id = pygame_key_id
 		self.needs_to_be_updated = False
+		self.status = "open" # "open" means it hasn't been pressed, "set" means it's been pressed, and will be used as the next command on submit
 		
 		if self.width is not None and self.height is not None and self.open_color is not None and self.background_color is not None and self.border_width is not None:
 			self.button_surface = pygame.Surface((self.width,self.height))
 			self.button_surface.fill(self.background_color)
 			self.button_surface.fill(self.current_color,(self.border_width, self.border_width, self.width - 2* self.border_width, self.height - 2* self.border_width))
 
-		if self.text is not None:
+		if self.map_text is not None:
 			# draw the text on the button
-			self.button_text_image = Text_font.render(text,1,self.background_color)
-			text_dimensions = Text_font.size(self.text)
+			self.button_text_image = Text_font.render(self.map_text,1,self.background_color)
+			text_dimensions = Text_font.size(self.map_text)
 			self.button_surface.blit(self.button_text_image,[self.width/2-text_dimensions[0]/2,self.height/2-text_dimensions[1]/2])
 		main_screen.blit(self.button_surface,(self.x_pos,self.y_pos))
 
 	def draw_self(self, combat_mode = 0, map_mode = 0):
 		self.button_surface.fill(self.current_color,(self.border_width, self.border_width, self.width - 2* self.border_width, self.height - 2* self.border_width))
-		
+
 		if any([combat_mode, map_mode]):
 			if combat_mode == 0:
 				text_to_use = self.combat_text
 			if map_mode == 0:
-				text_to_use = self.text
+				text_to_use = self.map_text
 			
-			if self.text is not None:
-				text_dimensions = Text_font.size(self.text)
-				self.button_text_image = Text_font.render(self.text,1,self.background_color)
+			if text_to_use is not None:
+				text_dimensions = Text_font.size(text_to_use)
+				self.button_text_image = Text_font.render(text_to_use,1,self.background_color)
 				self.button_surface.blit(self.button_text_image,[self.width/2-text_dimensions[0]/2,self.height/2-text_dimensions[1]/2])
-
 		main_screen.blit(self.button_surface,(self.x_pos,self.y_pos))
-		for each_key in KEY_COMMAND_STATUS:
-			KEY_COMMAND_STATUS[each_key] = "open"
-		KEY_COMMAND_STATUS[self.pygame_text_number] = "set"
+		self.needs_to_be_updated = False
 		
 	def change_status(self, new_status):
+		self.needs_to_be_updated = True
 		if new_status == "set":
+			self.status = "set"
 			self.current_color = self.set_color
+			for each_button in BUTTONS:
+				if each_button.pygame_key_id is not self.pygame_key_id and each_button.status is "set":
+					each_button.change_status(new_status = "open")
 		elif new_status == "open":
+			self.status = "open"
 			self.current_color = self.open_color
 		else:
 			sys.exit("You tried to set a button to something it can't be.")
-
 	def perform_action(self):
 		z=1
-	
-	def set_mode(self, new_mode):
-		# Switch from combat to map mode or vice versa
-		self.mode = new_mode
+
 
 class Screen:
 	def __init__(self, dimensions, background_color, foreground_color, text_color, border_width):
@@ -122,18 +121,20 @@ class Screen:
 		self.foreground_color = foreground_color
 		self.text_color = text_color
 		self.outer_dimensions = dimensions
-		self.inner_dimensions_and_position = [self.x_pos + self.border_width, self.y_pos+self.border_width, self.width - 2*self.border_width, self.height - 2*self.border_width] # this is used to specify the inner panel's placement when you're positioning it in the screen element
+		self.inner_dimensions_and_position = [self.border_width, self.border_width, self.width - 2*self.border_width, self.height - 2*self.border_width] # this is used to specify the inner panel's placement when you're positioning it in the screen element
 		self.inner_dimensions = [0,0,self.width - 2*self.border_width, self.height - 2*self.border_width] # this is used for placing and designing stuff on the inner panel before you pass it to the screen to be rendered
 		self.needs_to_be_updated = False
 		
 		# create a Pygame rect based on this info
-		self.screen_image = pygame.Surface(self.outer_dimensions)
+		self.screen_image = pygame.Surface((self.width,self.height))
 		self.screen_image.fill(self.background_color)
 		self.screen_image.fill(self.foreground_color, self.inner_dimensions_and_position)
 		# dimensions expect 
+		self.draw_self(1,0)
+		main_screen.blit(self.screen_image,(self.x_pos,self.y_pos))
 		
-	def check_length(text, image_width):
-		text_size = Text_font.size()
+	def check_length(self, text, image_width):
+		text_size = Text_font.size(text)
 		text_width = text_size[0]
 		if text_width > image_width:
 			return False # text width greater than image width
@@ -151,11 +152,14 @@ class Screen:
 		
 		while self.check_length(string_back_half, image_width) is False:
 			string_front_half = string_front_half + string_back_half[0]
-			string_front_half = string_front_half[0:-1]
-			if self.check_length(string_front_half, image_width) is False:
+			string_back_half = string_back_half[1:]
+			if self.check_length(string_front_half, image_width) is True:
+				continue
+			else:
 				# back up a letter
-				string_back_half = string_front_half[-1] + string_back_half
-				string_front_half = string_front_half[0:-1]
+				while string_front_half[-1] is not " ":
+					string_back_half = string_front_half[-1] + string_back_half
+					string_front_half = string_front_half[0:-1]
 				wrapped_text.append(string_front_half)
 				string_front_half = ""
 			wrapped_text.append(string_front_half) # because we still have the front half laying around
@@ -176,10 +180,10 @@ class Screen:
 	def display_text(self, text):
 		# this is the function you call when you want to tell a screen to display a piece of text
 		# you don't call it directly, though, you tell the screen to use draw_self() and it looks at the current game state and the map node's story elements
-		lines_to_display = self.wrap_text(text)
+		lines_to_display = self.wrap_text(text,self.width - 4*self.border_width)
 		if lines_to_display is not None:
 			line_counter = 0
-			self.text_image = pygame.Surface(self.inner_dimensions)
+			self.text_image = pygame.Surface([self.width - 2*self.border_width, self.height - 2*self.border_width])
 			for each_line in lines_to_display:
 				line_image = Text_font.render(each_line,1,self.background_color)
 				line_dimensions = Text_font.size(each_line)
@@ -189,6 +193,12 @@ class Screen:
 			self.screen_image.blit(self.text_image,self.inner_dimensions_and_position)
 	
 	def draw_self(self, combat_mode, map_mode):
+		text_to_draw = "Now this is the story all about how, My life got flipped, turned upside down, And I'd like to take a minute, just sit right there, I'll tell you how I became the prince of a town called Bel Air. In West Philadelphia I was born and raised On the playground is where I spent most of my days. Chillin' out, maxin', relaxin all cool, And all shootin some b-ball outside of the school. When a couple of guys who were up to no good, Started makin' trouble in my neighborhood. I got in one little fight and my mom got scared, And said 'You're movin with your auntie and uncle in bel Air.' I whistled for a cab, and when it came near, The license plate said 'fresh' and it had dice in the mirror. If anything I could say that this cat was rare, But I thought 'Nah forget it, Yo home to Bel Air.' I pulled up to the house about seven or eight, and I yelled to the cabby 'Yo homes, smell ya later.' Looked at my kingdom, I was finally there, To sit on my throne as the Prince of Bel Air. "
+		if len(CURRENT_NODE) is not 0:
+			text_to_draw = CURRENT_NODE[0].Descriptive_Text
+		self.display_text(text_to_draw)
+		self.needs_to_be_updated = False
+		main_screen.blit(self.screen_image,(self.x_pos,self.y_pos))
 		# check current story element
 		# figure out which text to display
 		# call display_text() and pass it the appropriate text
@@ -198,14 +208,25 @@ class Screen:
 
 
 class Node:
-	def __init__(self, type):
+	def __init__(self):
 		self.Node_contents = None # for storing all the original specifications of the Node
 		self.Story_elements = [] # list of Story objects
 		self.Map_image = None # filename for map to display
 		self.Element_Names = None
 		self.Contents = None
+		
+class Map(Node):
+	def __init__(self):
+		# any attribute name you use here has to match how it will be written in the spec file
+		self.Node_Name = None
+		self.NPCs = None
+		self.items = None
+		self.effects = None # if you want to do something like, the room takes away five health per turn
+		self.Story_Element_Names = None
+		self.Flags = None
+		self.Descriptive_Text = None
 
-class StoryElement:
+class StoryElement(Node):
 	def __init__(self, name, text, prerequisites, effects):
 		self.name = name
 		self.text = text
@@ -243,36 +264,55 @@ class Character(Node):
 
 		
 # this function will read in the environment nodes and store them as code objects
-def parse_node_file(file, node_storage):
+def parse_node_file(filename, node_storage, type):
+	file = open(filename)
 	internal_check = 0
+	if type is "map":
+		Node_type = Map
+	current_line = ""
 	for line in file:
-		line = line.rstrip()
+		line = line.rstrip('\n')
 		if re.search("{",line):
-			current_node = Node()
+			current_node = Node_type()
+			internal_check += 1
 		if re.search("\[",line):
 			current_text = ""
 			current_name = ""
-			internal_check += 0
+			current_line = ""
+			internal_check += 1
+		current_line += line
+		print(current_line)
 		if re.search("\]",line):
-			line_text = re.search("(.*)\]"line)
-			current_text += line_text.group(1)
+			name_search = re.search("\[(.+?):",current_line)
+			if name_search is None:
+				sys.exit("Your game file has no element name I can see")
+			current_name = name_search.group(1)
+			print("current name is "+str(current_name))
+			content_search = re.search(":(.+?)\]",current_line)
+			if content_search is None:
+				sys.exit("Your game file has no element content I can see")
+			current_text = content_search.group(1)
+			print("current content is "+str(current_text))
 			current_node.__setattr__(current_name, current_text)
-			internal_check -= 0
+			internal_check -= 1
 		if re.search("}",line):
-			SAVED_NODES.append(current_node)
+			node_storage.append(current_node)
 			current_node = None
+			internal_check -= 1
 			if internal_check is not 0:
 				sys.exit("Your game file has mismatched delimiters")
 
 # These are the settings for regular UI interaction buttons
 direction_combat_button_settings = Settings(width=BUTTON_WIDTH, height = BUTTON_HEIGHT, open_color = BUTTON_OPEN_COLOR, set_color = BUTTON_SET_COLOR, background_color = BUTTON_BACKGROUND_COLOR, border_width = BUTTON_BORDER_WIDTH)
 
-w_button = Button(x_pos = 255, y_pos = 362, button_settings = direction_combat_button_settings, text = "w", combat_text = "Heavy Attack")
-a_button = Button(x_pos = 130, y_pos = 393, button_settings = direction_combat_button_settings, text = "a", combat_text = "Roll Left")
-s_button = Button(x_pos = 255, y_pos = 393, button_settings = direction_combat_button_settings, text = "s", combat_text = "Light Attack")
-d_button = Button(x_pos = 375, y_pos = 393, button_settings = direction_combat_button_settings, text = "d", combat_text = "Roll Right")
-q_button = Button(x_pos = 130, y_pos = 362, button_settings = direction_combat_button_settings, text = "q", combat_text = "Block")
-f_button = Button(x_pos = 500, y_pos = 393, button_settings = direction_combat_button_settings, text = "Commit", combat_text = "Commit")
+w_button = Button(x_pos = 255, y_pos = 362, button_settings = direction_combat_button_settings, map_text = "North", combat_text = "Heavy Attack", pygame_key_id = K_w)
+a_button = Button(x_pos = 130, y_pos = 393, button_settings = direction_combat_button_settings, map_text = "West", combat_text = "Roll Left", pygame_key_id = K_a)
+s_button = Button(x_pos = 255, y_pos = 393, button_settings = direction_combat_button_settings, map_text = "South", combat_text = "Light Attack", pygame_key_id = K_s)
+d_button = Button(x_pos = 375, y_pos = 393, button_settings = direction_combat_button_settings, map_text = "East", combat_text = "Roll Right", pygame_key_id = K_d)
+q_button = Button(x_pos = 130, y_pos = 362, button_settings = direction_combat_button_settings, map_text = "Examine", combat_text = "Block", pygame_key_id = K_q)
+f_button = Button(x_pos = 500, y_pos = 393, button_settings = direction_combat_button_settings, map_text = "Commit", combat_text = "Commit", pygame_key_id = K_f)
+
+BUTTONS.extend([w_button,a_button,s_button,d_button,q_button,f_button])
 	
 # main strategy for game handling:
 # tasks in map node:
@@ -300,17 +340,14 @@ f_button = Button(x_pos = 500, y_pos = 393, button_settings = direction_combat_b
 # it's agnostic to what the buttons actually do or what's being displayed on screen
 # the buttons call handler functions that perform the proper actions mased on checking the combat_mode and map_mode flags
 
-def combat_turn(player, combatant_list):
+def combat_turn(all_combatants):
 	# figures out initiative, performs combat
 	if combat_mode == 0:
 		return None
 	elif combat_mode == 1 and player_ready == 1:
-		combat_order = [player]
-		combat_order.extend(combatant_list)
-		sorted_order = sorted(combat_order,key = lambda x: x.calc_initiative_target())
-		for each in sorted_order:
+		combat_order = sorted(all_combatants,key = lambda x: x.calc_initiative_target(all_combatants)) # calc_initiative_target() chooses the target's initiative and target, this function sorts by initiative
+		for each in combat_order:
 			each.attack_action(each.target)
-		
 		
 def map_turn(player,action, target=None):
 	if map_mode == 0:
@@ -328,6 +365,20 @@ def map_turn(player,action, target=None):
 		x=2
 		#open inventory menu
 
+def process_turn(combat_mode, map_mode, player_action = None, ready_mode = 0):
+	if combat_mode not in [0,1] or map_mode not in [0,1] or ready_mode not in [0,1] or combat_mode == map_mode:
+		sys.exit("Your game control logic is faulty")
+	
+	if combat_mode is 1:
+		x=1
+		# get all present entities from the current map node
+		# pass them to combat_turn
+		
+	if map_mode is 1 and ready_mode is 1:
+		x=1
+		# use player_action and the current map node to figure out what to do
+	
+
 def draw_whole_screen(combat_mode = 0, map_mode = 0):
 	if combat_mode not in [0,1] or map_mode not in [0,1] or combat_mode == map_mode:
 		sys.exit("Your game control logic is faulty")
@@ -339,8 +390,17 @@ def draw_whole_screen(combat_mode = 0, map_mode = 0):
 		if each_screen.needs_to_be_updated is True:
 			each_screen.draw_self(combat_mode, map_mode)
 
-Main_Interface_Screen = Screen([10,10,100,100], background_color=BUTTON_BACKGROUND_COLOR, foreground_color=BUTTON_OPEN_COLOR, text_color=[0,0,0], border_width=10)
-	
+Main_Interface_Screen = Screen([10,10,600,200], background_color=BUTTON_BACKGROUND_COLOR, foreground_color=BUTTON_OPEN_COLOR, text_color=[0,0,0], border_width=10)
+Main_Interface_Screen.needs_to_be_updated = True
+SCREENS.append(Main_Interface_Screen)
+
+parse_node_file("map.txt",MAPS,type="map")
+CURRENT_NODE.append(MAPS[0])
+print(CURRENT_NODE[0].Descriptive_Text)
+
+map_mode = 1
+combat_mode = 0
+ready_mode = 0
 while exit_status is 0:
 	next_event = pygame.event.poll()
 	if next_event == pygame.NOEVENT:
@@ -379,8 +439,8 @@ while exit_status is 0:
 		action = "examine_node"
 		# pop up menu to choose target
 		# call .get_most_recent_story(current_node) on the node
-
-		
+	
+	process_turn(combat_mode, map_mode)
 	# if map_mode is 1 and combat_mode is 0:
 		# map_turn(player,action)
 		# draw_screen(combat_mode, map_mode)
@@ -388,7 +448,7 @@ while exit_status is 0:
 		# combat_turn(player,enemy,action)	
 		# draw_screen(combat_mode, map_mode)
 		
-		
+	draw_whole_screen(combat_mode,map_mode)
 	pygame.display.flip() #flip updates the main_screen to the actual displayscreen
 
 pygame.quit()

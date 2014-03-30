@@ -1,5 +1,5 @@
 \documentclass[11pt]{article}
-
+\usepackage[normalem]{ulem}
 \usepackage{fullpage}
 %\usepackage{upgreek}
 \usepackage[no-math]{fontspec}
@@ -13,7 +13,7 @@
 \usepackage{booktabs} % for nice tables
 
 \begin{document}
-\title{Halcyon Engine}
+\title{Halcyon Engine Documentation}
 \date{}
 \maketitle{}
 
@@ -22,8 +22,10 @@ The major design goal driving the development of the Halcyon Engine is the abili
 
 To that end, most of the specification of games themselves is done through user-supplied files with a custom markup.
 On engine start, the user-supplied files are read in and used to create the world map, NPCs, NPC attributes, and story events.
+My goal is to define as concrete a distinction between the game's content and the way the game is handled.
+Some aspects of the game files will necessarily include a small amount of Python code, and there will be a requirement that the names of the game file elements follow a prescribed format, spelling, and capitalization, but the game files should be flexible outside of those requirements.
 
-\section{Halcyon: A Series of \strikethrough{Tubes}Nodes}
+\section{Halcyon: A Series of \sout{Tubes}Nodes}
 The basic conceptual unit used to specify a game for the Halcyon engine is a node.
 A node is delimited by curly brackets and contains several key:value pairs of data which are interpreted by the game engine.
 
@@ -32,11 +34,44 @@ Those types are: Story, Map, NPC, and Player.
 The NPC and Player node types are identical in terms of required contents; the separate designation is so that the player character can be easily identified if many different NPC types are specified.
 
 \subsection{Map}
-hi
-\subsection{Story}
+The Map nodes define the environment in which the player moves.
+Imagine a simple case of a grid of rooms, each with a door on each wall, leading to the adjacent room.
+Each room would be an independent Map node, and each Map node keeps track of the NPCs currently inside it, any event flags that are tied to that room specifically, its own name and description, and the routes to other rooms.
+\subsubsection{Nodes do not reflect physical reality}
+However, because nodes are defined independently and only connected to each other by listing the permissible exit routes from each node, the game's map does not necessarily have to be a square grid with each room equidistant from each other, and you don't have to respect requirements of space.
+For example, imagine a case with two separate nodes (A and B), each with a connection to a third node (C).
+If all three nodes were plotted together on a map, it could easily be the case that each node is located on a different edge of the map (A at the far north, B far to the east, and C to the south) and there is a great number of nodes inbetween them.
+This wouldn't matter, because what defines movement is the connection between nodes and not an underlying physical reality.
+For an example of the utility this serves, this could be used to create a fast-travel system (the A,B,C example) or to create one-way doors (define a connection from A to B, but not from B to A).
+
+\subsubsection{Map nodes like to talk about themselves}
+Each Map node will come with its own default description as well as a list of associated story elements.
+The default description is provided so that if you simply want to define a spaceholder room or you want a room for worldbuilding purposes (the oppressive waiting room you pass through before seeing the crime boss, perhaps), but don't want to go to the hassle of defining a whole set of story elements for it.
+This is also used as the default description in case the story element logic breaks down somehow.
+
+When the Map node file is read in, all the contents of a field are treated as a single line.
+For that reason, there is some unique markup defined for the display of text within the game.
+To specify line breaks, use four asterisks (****).
+A single **** signal will tell the game to put a line break in and start a new paragraph with a gap between them.
+It's the equivalent of hitting enter twice in a text editor, basically.
+
+To signal a page break, use four equal signs (====).
+A ==== signal will direct the game to stop rendering the text and wait for user input to continue, and when the user indicates that they're ready to move on, the display will be blanked and text will begin anew.
+This is not the most useful thing for basic map descriptions but it will become important for story elements and NPC interactions.
+However, it still may be useful for Map nodes.
+\subsubsection{Maps are an exercise in semaphore}
+flags
+\subsection{Story Elements}
 nothing is here yet
 \subsection{NPC and Player}
 neat game though huh?
 \section{Settings}
-you can change them.
+Basic game settings are defined in the settings.py file.
+This is one of the places where, for ease and utility, I will have to insist on straight Python code rather than interpreted text.
+However, all we're doing here is setting variable values, so it's not onerous.
+This file contains settings for game size, UI colors, font size and type, and text display.
+These are settings which are important but rarely need to be considered, so for the sake of readability in the main code they're kept in their own file.
+
+I'm not using an ini file because as far as I can tell the libraries for ini interpretation require you to write out the names of the variables you're setting in your main code anyway and just refer to the ini for the corresponding value.
+That's certainly a much safer way to do it, since the way I'm doing it I'm risking the possibility of injecting malicious code through the settings file, but let's be honest here any time you run someone else's code you're taking that risk and someone could just as easily have put it in the main code itself (more easily in fact, because there's more content to obscure it).
 \end{document}
