@@ -27,6 +27,7 @@ BUTTONS = []
 SCREENS = []
 MAPS = []
 CURRENT_NODE = []
+STORY_ELEMENTS = []
 
 # Start up the font object for text display
 pygame.font.init()
@@ -130,7 +131,7 @@ class Screen:
 		self.screen_image.fill(self.background_color)
 		self.screen_image.fill(self.foreground_color, self.inner_dimensions_and_position)
 		# dimensions expect 
-		self.draw_self(1,0)
+		#self.draw_self(1,0)
 		main_screen.blit(self.screen_image,(self.x_pos,self.y_pos))
 		
 	def check_length(self, text, image_width):
@@ -192,10 +193,11 @@ class Screen:
 			self.screen_image.fill(self.foreground_color)
 			self.screen_image.blit(self.text_image,self.inner_dimensions_and_position)
 	
-	def draw_self(self, combat_mode, map_mode):
-		text_to_draw = "Now this is the story all about how, My life got flipped, turned upside down, And I'd like to take a minute, just sit right there, I'll tell you how I became the prince of a town called Bel Air. In West Philadelphia I was born and raised On the playground is where I spent most of my days. Chillin' out, maxin', relaxin all cool, And all shootin some b-ball outside of the school. When a couple of guys who were up to no good, Started makin' trouble in my neighborhood. I got in one little fight and my mom got scared, And said 'You're movin with your auntie and uncle in bel Air.' I whistled for a cab, and when it came near, The license plate said 'fresh' and it had dice in the mirror. If anything I could say that this cat was rare, But I thought 'Nah forget it, Yo home to Bel Air.' I pulled up to the house about seven or eight, and I yelled to the cabby 'Yo homes, smell ya later.' Looked at my kingdom, I was finally there, To sit on my throne as the Prince of Bel Air. "
-		if len(CURRENT_NODE) is not 0:
-			text_to_draw = CURRENT_NODE[0].Descriptive_Text
+	def draw_self(self, text_to_draw):
+		# i want to change this so it's multifunctional. right now it's tied into the game state, but i want to make the draw_self method agnostic of what's actually going on in the game
+		# the screen will take care of actually rendering text, you just have to point it to where the text is it needs to render
+		
+		# right now I have some confused functionality between preparing the image and putting the image on the main screen
 		self.display_text(text_to_draw)
 		self.needs_to_be_updated = False
 		main_screen.blit(self.screen_image,(self.x_pos,self.y_pos))
@@ -207,15 +209,8 @@ class Screen:
 		# put together a scroll widget that I can use to inform the screen of how to position the text
 
 
-class Node:
-	def __init__(self):
-		self.Node_contents = None # for storing all the original specifications of the Node
-		self.Story_elements = [] # list of Story objects
-		self.Map_image = None # filename for map to display
-		self.Element_Names = None
-		self.Contents = None
-		
-class Map(Node):
+	
+class Map:
 	def __init__(self):
 		# any attribute name you use here has to match how it will be written in the spec file
 		self.Node_Name = None
@@ -226,20 +221,26 @@ class Map(Node):
 		self.Flags = None
 		self.Descriptive_Text = None
 
-class StoryElement(Node):
-	def __init__(self, name, text, prerequisites, effects):
-		self.name = name
-		self.text = text
-		self.prerequisites = prerequisites
-		self.effects = effects
+class StoryElement:
+	def __init__(self, element_name, paths):
+		self.element_name = element_name
+		self.paths = paths # is a list of the names of the paths
+		# the story element keeps track of the paths and their prerequisites
+	def choose_path(self):
+		# look at your stored story paths
+		# if there's only one, then do the appropriate stuff: send the text to the screen, modify buttons, change game state, etc
+		# if there's more than one, check the prerequisites for each
+		x=1
 
-# this class will be used to set what the playstyles of the NPCs are			
+		
 class AI_settings:
+	# this class will be used to set what the playstyles of the NPCs are	
+	# for example, some NPCs may be a caster type, and biased toward magic use
 	def __init__(self, style):
 		self.style=style
 
-# this class holds the information about where the NPCs are and what they're holding and how to move them
-class Character(Node):
+class Character:
+	# this class holds the information about where the NPCs are and what they're holding and how to move them
 	def __init__(self, name, location, AI_component = None):
 		self.name = name
 		self.location = location
@@ -269,38 +270,75 @@ def parse_node_file(filename, node_storage, type):
 	internal_check = 0
 	if type is "map":
 		Node_type = Map
-	current_line = ""
-	for line in file:
-		line = line.rstrip('\n')
-		if re.search("{",line):
-			current_node = Node_type()
-			internal_check += 1
-		if re.search("\[",line):
-			current_text = ""
-			current_name = ""
-			current_line = ""
-			internal_check += 1
-		current_line += line
-		print(current_line)
-		if re.search("\]",line):
-			name_search = re.search("\[(.+?):",current_line)
-			if name_search is None:
-				sys.exit("Your game file has no element name I can see")
-			current_name = name_search.group(1)
-			print("current name is "+str(current_name))
-			content_search = re.search(":(.+?)\]",current_line)
-			if content_search is None:
-				sys.exit("Your game file has no element content I can see")
-			current_text = content_search.group(1)
-			print("current content is "+str(current_text))
-			current_node.__setattr__(current_name, current_text)
-			internal_check -= 1
-		if re.search("}",line):
-			node_storage.append(current_node)
-			current_node = None
-			internal_check -= 1
-			if internal_check is not 0:
-				sys.exit("Your game file has mismatched delimiters")
+		current_line = ""
+		for line in file:
+			line = line.rstrip('\n')
+			if re.search("{",line):
+				current_node = Map()
+				internal_check += 1
+			if re.search("\[",line):
+				current_text = ""
+				current_name = ""
+				current_line = ""
+				internal_check += 1
+			current_line += line
+			print(current_line)
+			if re.search("\]",line):
+				name_search = re.search("\[(.+?):",current_line)
+				if name_search is None:
+					sys.exit("Your game file has no element name I can see")
+				current_name = name_search.group(1)
+				print("current name is "+str(current_name))
+				content_search = re.search(":(.+?)\]",current_line)
+				if content_search is None:
+					sys.exit("Your game file has no element content I can see")
+				current_text = content_search.group(1)
+				print("current content is "+str(current_text))
+				current_node.__setattr__(current_name, current_text)
+				internal_check -= 1
+			if re.search("}",line):
+				node_storage.append(current_node)
+				current_node = None
+				internal_check -= 1
+				if internal_check is not 0:
+					sys.exit("Your game file has mismatched delimiters")
+	elif type is "story":
+		# HOLY WOW THIS IS BROKEN RIGHT NOW
+		Node_type = StoryElement
+		current_line = ""
+		# HOW AM I GOING TO STORE THE MULTIPLE PATH INFORMATION?
+		# MAYBE BY MAKING A DICT WITH TUPLES AS THE VALUES?
+		for line in file:
+			line = line.rstrip('\n')
+			if re.search("{",line):
+				current_node = Map()
+				internal_check += 1
+			if re.search("\[",line):
+				current_text = ""
+				current_name = ""
+				current_line = ""
+				internal_check += 1
+			current_line += line
+			print(current_line)
+			if re.search("\]",line):
+				name_search = re.search("\[(.+?):",current_line)
+				if name_search is None:
+					sys.exit("Your game file has no element name I can see")
+				current_name = name_search.group(1)
+				print("current name is "+str(current_name))
+				content_search = re.search(":(.+?)\]",current_line)
+				if content_search is None:
+					sys.exit("Your game file has no element content I can see")
+				current_text = content_search.group(1)
+				print("current content is "+str(current_text))
+				current_node.__setattr__(current_name, current_text)
+				internal_check -= 1
+			if re.search("}",line):
+				node_storage.append(current_node)
+				current_node = None
+				internal_check -= 1
+				if internal_check is not 0:
+					sys.exit("Your game file has mismatched delimiters")
 
 # These are the settings for regular UI interaction buttons
 direction_combat_button_settings = Settings(width=BUTTON_WIDTH, height = BUTTON_HEIGHT, open_color = BUTTON_OPEN_COLOR, set_color = BUTTON_SET_COLOR, background_color = BUTTON_BACKGROUND_COLOR, border_width = BUTTON_BORDER_WIDTH)
@@ -350,6 +388,9 @@ def combat_turn(all_combatants):
 			each.attack_action(each.target)
 		
 def map_turn(player,action, target=None):
+	# map_turn() is the main non-combat function that controls the game.
+	# this function will perform movement by changing game state and switching player position in the map node collection
+	# it will also facilitate environment/npc interactions by invoking the story objects associated with the current map node
 	if map_mode == 0:
 		return None
 	if action == "move":
@@ -364,8 +405,16 @@ def map_turn(player,action, target=None):
 	elif action == "inventory":
 		x=2
 		#open inventory menu
+	
+	if len(CURRENT_NODE) is not 0:
+			text_to_draw = CURRENT_NODE[0].Descriptive_Text
+	else:
+		text_to_draw = "lol placeholder"
+	Main_Inferface_Screen.draw_self(text_to_draw)
 
 def process_turn(combat_mode, map_mode, player_action = None, ready_mode = 0):
+	# ready_mode determines whether the player is ready for a game update
+	# if the player is ready, process_turn() invokes map_turn(), which either looks at the current map node (if it's a non-movement action that needs to be performed) for text to display, or moves the player and then looks to the map node
 	if combat_mode not in [0,1] or map_mode not in [0,1] or ready_mode not in [0,1] or combat_mode == map_mode:
 		sys.exit("Your game control logic is faulty")
 	
@@ -380,6 +429,7 @@ def process_turn(combat_mode, map_mode, player_action = None, ready_mode = 0):
 	
 
 def draw_whole_screen(combat_mode = 0, map_mode = 0):
+	# right now this game structure is kind of fucked up, i should make it so that you just assume they dont need to be changed unless the user instructions tell you to modify it, which should happen before this step
 	if combat_mode not in [0,1] or map_mode not in [0,1] or combat_mode == map_mode:
 		sys.exit("Your game control logic is faulty")
 	
@@ -397,6 +447,8 @@ SCREENS.append(Main_Interface_Screen)
 parse_node_file("map.txt",MAPS,type="map")
 CURRENT_NODE.append(MAPS[0])
 print(CURRENT_NODE[0].Descriptive_Text)
+
+parse_node_file("story_elements.txt",STORY_ELEMENTS,type="story")
 
 map_mode = 1
 combat_mode = 0
@@ -441,12 +493,7 @@ while exit_status is 0:
 		# call .get_most_recent_story(current_node) on the node
 	
 	process_turn(combat_mode, map_mode)
-	# if map_mode is 1 and combat_mode is 0:
-		# map_turn(player,action)
-		# draw_screen(combat_mode, map_mode)
-	# elif combat_mode is 1 and map_mode is 0:
-		# combat_turn(player,enemy,action)	
-		# draw_screen(combat_mode, map_mode)
+	# process_turn() looks at the game state and decides what to do - in map mode, it asks the map node what text to display, then tells the screens to display that text, and in combat mode, it calls the functions that carry out combat
 		
 	draw_whole_screen(combat_mode,map_mode)
 	pygame.display.flip() #flip updates the main_screen to the actual displayscreen

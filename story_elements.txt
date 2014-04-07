@@ -1,8 +1,23 @@
 { # start node
 [Node_Name:
-Dungeon
+First_Encounter
 ]
-[Prerequisites:]
-[Story_Content:]
-[Effects:]
+[Prerequisites:FirstPath:Foyer1=1]
+[Story_Content:FirstPath:You enter the dripping dungeon, wary of threats.]
+[Effects:FirstPath:None]
+[Keys:FirstPath:Commit]
+} # end node
+
+{ # start node
+[Node_Name:
+Example
+]
+[Prerequisites:FirstPath:]
+[Story_Content:FirstPath:]
+[Effects:FirstPath:]
+[Keys:FirstPath:]
+[Prerequisites:SecondPath:]
+[Story_Content:SecondPath:]
+[Effects:SecondPath:]
+[Keys:SecondPath:]
 } # end node
