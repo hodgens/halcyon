@@ -25,6 +25,7 @@ On engine start, the user-supplied files are read in and used to create the worl
 My goal is to define as concrete a distinction between the game's content and the way the game is handled.
 Some aspects of the game files will necessarily include a small amount of Python code, and there will be a requirement that the names of the game file elements follow a prescribed format, spelling, and capitalization, but the game files should be flexible outside of those requirements.
 
+If a player wishes to add a new location to the game's map, or add a new item to the game, or a new character to the roster, the goal is for the user to be able to do so with minimal effort and programming experience (and, unavoidably, a bit of bookkeeping).
 \section{Halcyon: A Series of \sout{Tubes}Nodes}
 The basic conceptual unit used to specify a game for the Halcyon engine is a node.
 A node is delimited by curly brackets and contains several key:value pairs of data which are interpreted by the game engine.
@@ -48,6 +49,8 @@ For an example of the utility this serves, this could be used to create a fast-t
 Each Map node will come with its own default description as well as a list of associated story elements.
 The default description is provided so that if you simply want to define a spaceholder room or you want a room for worldbuilding purposes (the oppressive waiting room you pass through before seeing the crime boss, perhaps), but don't want to go to the hassle of defining a whole set of story elements for it.
 This is also used as the default description in case the story element logic breaks down somehow.
+When the player enters a map node, the game will check all the associated story elements to determine if they need to be displayed and if the player meets the requirements for viewing them.
+If no story elements are available or the requirements for the story elements are not met, then the default map node description will be displayed.
 
 When the Map node file is read in, all the contents of a field are treated as a single line.
 For that reason, there is some unique markup defined for the display of text within the game.
@@ -62,7 +65,30 @@ However, it still may be useful for Map nodes.
 \subsubsection{Maps are an exercise in semaphore}
 flags
 \subsection{Story Elements}
-nothing is here yet
+Story Elements are where the meat of the story and setting of the game are defined.
+They are where things like conversations with NPCs are stored.
+Unfortunately, they are also one example of a place where a certain amount of Python native code must be used.
+However, it should not be necessary to do anything more complicated than perform a simple conditional check or call another story element's display method.
+
+Each story element consists of several key features:
+\begin{description}
+	\item[Node_Name] The name of the map node which this story element belongs to. If you specify multiple node names, separated by commas, this element can start in multiple nodes. This is only for defining nodes in which this element can start autonomously; it is possible to start a story element at any time by doing things like tying it to item usage or combat outcomes.
+	\item[Alternative Paths] If you want to define multiple different ways a single conversation or description can play out, one way to achieve this is by using story elements with multiple possible paths. The syntax for this requires defining a set of three fields for each pathway: Prerequisites, Story_Content, and Effects. These three fields are described in further detail below. Alternate pathways are defined by giving them a unique name inside the story element, and using the element form of [element type: path name : element contents]. The Prerequisites field will be used to determine which path is displayed.
+	\item[Prerequisites] These are the things which must be the case for the story element to be displayed.
+	\item[Story_Content] This is the actual text which will be displayed.
+	\item[Effects] This is where you define the effects of your story. These can be things like applying stat changes, altering the player's inventory, or triggering additional story elements.
+	\item[Keys] This is how you define which keys will be used to interact with the story element, such as whether it's just a simple ``yes I've read this'' or actually a choice between several dialogue options. If you want to have different options create different outcomes, you'll need to make the story element's effect tie into a separate new story element. This might be a really clunky way to handle it though.
+	
+\end{description}
+
+When a story element is displayed, the player is prompted for input.
+This can be either a simple Confirm command, or a Yes/No answer.
+
+When a story element is defined, you have the option of displaying either a single default text or checking for conditionals based on the player's attributes or game flags.
+For example, if you want to vary the text which is displayed 
+
+A story element will contain its own internal flag for whether it has been seen.
+If you want to define a single-instance event, then the 
 \subsection{NPC and Player}
 neat game though huh?
 \section{Settings}

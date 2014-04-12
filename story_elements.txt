@@ -2,6 +2,7 @@
 [Node_Name:
 First_Encounter
 ]
+[Paths:]
 [Prerequisites:FirstPath:Foyer1=1]
 [Story_Content:FirstPath:You enter the dripping dungeon, wary of threats.]
 [Effects:FirstPath:None]
