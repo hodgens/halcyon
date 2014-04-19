@@ -1,0 +1,44 @@
+# If you want to make your directions fit a NWSE pattern on the WASD keys, order them that way.
+# WASD will be filled in the order that they're defined here.
+{
+[Type:Map]
+[Node_Name:Foyer]
+[Descriptive_Text:The entrance to the dungeon]
+[Flags:Foyer1=1]
+[Story_Element_Names:None]
+[Items:None]
+[NPCs:Player]
+[Destinations:Dungeon,Wast,Sith,Euste,Fart,Kitchen,Go Away,Cemetary]
+}
+
+{ # start node
+[Type:Map]
+[Node_Name:
+Dungeon
+]
+
+[Descriptive_Text:
+****A damp, chilly dungeon
+====You don't really like it here.
+]
+
+[Flags:
+Test1=1,
+Test2=4,
+NPC_story1=1,
+NPC_story2=0,
+NPC_story3=0,
+]
+
+[Story_Element_Names:
+First_Encounter
+]
+
+
+[NPCs:
+Bob
+]
+[Destinations:Foyer]
+} # end node
+
+

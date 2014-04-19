@@ -89,6 +89,12 @@ For example, if you want to vary the text which is displayed
 
 A story element will contain its own internal flag for whether it has been seen.
 If you want to define a single-instance event, then the 
+
+A story element can also redefine the display of the buttons.
+Any button which not currently have a use will be displayed as grayed-out and textless.
+If you want to make it active, you need to specify it.
+For example, the following: \textbf{[Keys:Commit,default;Option1,Give up]} would tell the game to display the Commit button with the default text (which is something like ``Accept''), and to enable the Option1 button with the text ``Give up''.
+The story element triggered by ``Give up'' will be defined in the Effects field for this element.
 \subsection{NPC and Player}
 neat game though huh?
 \section{Settings}
@@ -100,4 +106,31 @@ These are settings which are important but rarely need to be considered, so for 
 
 I'm not using an ini file because as far as I can tell the libraries for ini interpretation require you to write out the names of the variables you're setting in your main code anyway and just refer to the ini for the corresponding value.
 That's certainly a much safer way to do it, since the way I'm doing it I'm risking the possibility of injecting malicious code through the settings file, but let's be honest here any time you run someone else's code you're taking that risk and someone could just as easily have put it in the main code itself (more easily in fact, because there's more content to obscure it).
+
+\section{Function Documentation (selected)}
+Important functions and class methods will be documented in this section.
+A short description of their intended use, their inputs, and outputs (if applicable) will be given.
+\subsection{Screen}
+\begin{description}
+	\item[.draw_self(text_to_draw)] Passes a piece of text to the Screen object, which typesets it, fills in variable text, draws the Screen on the display device, and tells the game that something has updated.
+\end{description}
+
+
+\subsection{Story Element}
+\begin{description}
+	\item[.get_story_text() -> [text_to_display, effects_to_enact, buttons_to_display] or None] Chooses from the available story paths contained in the story element by evaluating each path's prerequisites. Returns None if no path is available, or a three element list.
+	\item[.make_lists()] When the Story Element is first loaded from the game files, the paths are specified as single strings. This function turns the strings into lists or dictionaries as appropriate, and should be called immediately after populating the object.
+\end{description}
+
+\subsection{Map}
+\begin{description}
+	\item[.make_lists()] See the entry for Story Elements.
+	\item[__eq__(target) -> True or False] Asks the current Map element to compare itself to the target name you provide, which should be the Node_Name attribute of another Map element. Returns True if the attributes match, False if they do not.
+\end{description}
+
+\subsection{Global functions}
+\begin{description}
+	\item[parse_node_file(filename, node_storage, node_type)] Used to parse a game file and store its contents as code objects. Requires you to specify the node type (Story, Map, etc.) so that required attributes can be set. Also requires you to specify a list in which to store the Node objects once they are created.
+	\item[set_up_all_buttons(dict_of_buttons_to_change)] This function takes the button dictionary created by a Story Element, which is composed of key names and strings, and tells the corresponding buttons what text to display.
+\end{description}
 \end{document}

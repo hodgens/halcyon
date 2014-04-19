@@ -19,16 +19,18 @@ game_mode = 0
 combat_mode = 0
 map_mode = 1
 player_ready = 0
-update_count = 0
+update_count = 1
 test_attribute = 14
 #environment_file = open(sys.argv[1])
 NPC_LIST = []
-BUTTONS = []
+MOVEMENT_BUTTONS = []
+UI_BUTTONS = [] 
 SCREENS = []
 MAPS = []
 CURRENT_NODE = [None]
 STORY_ELEMENTS = []
 MAP_DISPLAY_KEYS = [K_w, K_a, K_s, K_d]
+page_count = 0
 
 # Start up the font object for text display
 pygame.font.init()
@@ -36,21 +38,20 @@ Text_font = pygame.font.SysFont("C:\Windows\Fonts\04B_19_.TTF",FONT_SIZE)
 
 class Settings:
 	# this class will define the settings for buttons, so they can be reused easily
-	def __init__(self, width, height, open_color, set_color, background_color, border_width):
+	def __init__(self, width, height, open_color, set_color, background_color, inactive_color, border_width):
 		self.width = width
 		self.height = height
 		self.open_color = open_color # used to define base color
 		self.set_color = set_color
 		self.background_color = background_color
 		self.border_width = border_width
+		self.inactive_color = inactive_color
 
 class Button:
 	# this class takes the settings and actually sets up where the buttons are and what they say
-	def __init__(self, x_pos = None, y_pos = None, button_settings = None, map_text = None, combat_text = None, action = None, text = None, pygame_key_id = None):
+	def __init__(self, x_pos = None, y_pos = None, button_settings = None, text = None, pygame_key_id = None):
 		# for readability, I'm going to move the settings from the settings object into this object
 		self.button_settings = button_settings
-		self.map_text = map_text
-		self.combat_text = combat_text
 		self.width = self.button_settings.width
 		self.height = self.button_settings.height
 		self.open_color = self.button_settings.open_color
@@ -60,55 +61,60 @@ class Button:
 		self.current_color = self.open_color
 		self.x_pos = x_pos
 		self.y_pos = y_pos
-		self.button_settings = button_settings # how big is it, what color is it, that stuff
-		self.action = action # the function the button performs when it's pressed by the user
 		self.pygame_key_id = pygame_key_id
 		self.status = "open" # "open" means it hasn't been pressed, "set" means it's been pressed, and will be used as the next command on submit
+		self.text = text # the default text you start with before the game tells it differently
+		self.transient_text = None # this is what the game tells you to say
 		
 		if self.width is not None and self.height is not None and self.open_color is not None and self.background_color is not None and self.border_width is not None:
 			self.button_surface = pygame.Surface((self.width,self.height))
 			self.button_surface.fill(self.background_color)
 			self.button_surface.fill(self.current_color,(self.border_width, self.border_width, self.width - 2* self.border_width, self.height - 2* self.border_width))
 
-		if self.map_text is not None:
+		if self.text is not None:
 			# draw the text on the button
-			self.button_text_image = Text_font.render(self.map_text,1,self.background_color)
-			text_dimensions = Text_font.size(self.map_text)
+			self.button_text_image = Text_font.render(self.text,1,self.background_color)
+			text_dimensions = Text_font.size(self.text)
 			self.button_surface.blit(self.button_text_image,[self.width/2-text_dimensions[0]/2,self.height/2-text_dimensions[1]/2])
 		main_screen.blit(self.button_surface,(self.x_pos,self.y_pos))
 
-	def draw_self(self):
-		self.button_surface.fill(self.current_color,(self.border_width, self.border_width, self.width - 2* self.border_width, self.height - 2* self.border_width))
 
-		if any([combat_mode, map_mode]):
-			if combat_mode == 0:
-				text_to_use = self.combat_text
-			if map_mode == 0:
-				text_to_use = self.map_text
-			
-			if text_to_use is not None:
-				text_dimensions = Text_font.size(text_to_use)
-				self.button_text_image = Text_font.render(text_to_use,1,self.background_color)
-				self.button_surface.blit(self.button_text_image,[self.width/2-text_dimensions[0]/2,self.height/2-text_dimensions[1]/2])
+	def draw_self(self):
+		self.button_surface.fill(self.current_color,(self.border_width, self.border_width, self.width - 2* self.border_width, self.height - 2* self.border_width)) # draw the empty button
+		if self.transient_text is None:
+			text_to_use = self.text
+		else:
+			text_to_use = self.transient_text
+		text_dimensions = Text_font.size(text_to_use)
+		self.button_text_image = Text_font.render(text_to_use,1,self.background_color)
+		self.button_surface.blit(self.button_text_image,[self.width/2-text_dimensions[0]/2,self.height/2-text_dimensions[1]/2])
 		main_screen.blit(self.button_surface,(self.x_pos,self.y_pos))
-		
+				
+
 	def change_status(self, new_status): # this is used to switch between the "open" and "set" cases for drawing buttons
+		global update_count
 		update_count += 1
-		if new_status == "set":
+		if new_status is "set":
 			self.status = "set"
 			self.current_color = self.set_color
-			for each_button in BUTTONS:
+			print("changing color to "+str(self.set_color))
+			self.draw_self()
+			for each_button in MOVEMENT_BUTTONS:
 				if each_button.pygame_key_id is not self.pygame_key_id and each_button.status is "set":
 					each_button.change_status(new_status = "open")
 					each_button.draw_self()
 		elif new_status == "open":
 			self.status = "open"
 			self.current_color = self.open_color
+			print("changing color to " +str(self.set_color))
 			self.draw_self()
 		else:
 			sys.exit("You tried to set a button to something it can't be.")
-	def perform_action(self):
-		z=1
+
+	def set_text(self, text_to_set):
+		# changes what text the button should display
+		self.transient_text = text_to_set
+		self.draw_self()
 
 
 class Screen:
@@ -196,6 +202,7 @@ class Screen:
 	def draw_self(self, text_to_draw):
 		# this takes text, renders it using internal functions, pastes it on the screen, and tells the game to update the screen
 		self.display_text(text_to_draw)
+		global update_count
 		update_count += 1
 		main_screen.blit(self.screen_image,(self.x_pos,self.y_pos))
 		# put together a scroll widget that I can use to inform the screen of how to position the text
@@ -210,6 +217,9 @@ class Map:
 		self.map_paths = None # expected to be a list of strings if present
 		self.Flags = None
 		self.Descriptive_Text = None
+		self.Destinations = None # expected to be a list
+		self.page_number = 0 # for deciding which destinations to display if you have too many
+		self.Story_Elements = None
 
 	def __eq__(self, target):
 		if self.Node_Name == target:
@@ -219,30 +229,69 @@ class Map:
 
 	def make_lists(self):
 		if self.map_paths is not None:
-			self.map_paths = self.map_paths(",")
+			self.map_paths = self.map_paths.split(",")
+		if self.Destinations is not None:
+			self.Destinations = self.Destinations.split(",")
+		if self.NPCs is not None:
+			self.NPCs = self.NPCs.split(",")
+	
+	def get_destinations(self):
+		# since we can only display four directions at a time
+		# but we may have more than four directions to display
+		# we need to check how many directions we have and choose which ones to send
+		if len(self.Destinations) <= len(MAP_DISPLAY_KEYS):
+			names_to_return = self.Destinations
+		else:
+			start_point = 0 + self.page_number*len(MAP_DISPLAY_KEYS)
+			end_point = len(MAP_DISPLAY_KEYS) + self.page_number*len(MAP_DISPLAY_KEYS)
+			if end_point > len(self.Destinations):
+				end_point = len(self.Destinations)
+			names_to_return = self.Destinations[start_point:end_point]
+		while len(names_to_return) < len(MAP_DISPLAY_KEYS):
+			names_to_return.append("")
+		dict_to_return = {each:names_to_return[MAP_DISPLAY_KEYS.index(each)] for each in MAP_DISPLAY_KEYS}
+		return dict_to_return
+
+	def turn_destinations_page(self):
+		if len(self.Destinations) >= len(MAP_DISPLAY_KEYS) and len(self.Destinations) - self.page_number*len(MAP_DISPLAY_KEYS) < len(MAP_DISPLAY_KEYS):
+			self.page_number = 0
+		else:
+			self.page_number += 1
+
+	def get_text(self):
+		if self.Story_Elements is None:
+			return self.Descriptive_Text
+		for each_story in self.Story_Elements:
+			story_factors = each_story.get_story_text()
+			if story_factors is not None:
+				return story_factors
+		return self.Descriptive_Text
+
 
 class StoryElement:
 	def __init__(self, element_name, paths = None):
 		self.element_name = element_name
 		self.paths = paths # is a list of the names of the paths
 		# the story element keeps track of the paths and their prerequisites
-		self.
 	def choose_path(self):
 		# this is an internal function that looks at the story's content and chooses which branch
 		if len(self.paths) is 1:
 			return self.paths[0]
+		evaluate_strings = lambda x: exec(x)
 		for each_path in self.paths:
-			if all([exec(each_string) for each_string in getattr(self,each_path+"_Prerequisites")]):
-			# the prerequisites are stored as strings, evaluate the strings
-				return each_path
+			if all([eval(each_string) for each_string in getattr(self,each_path+"_Prerequisites")]):
+            # the prerequisites are stored as strings, evaluate the strings
+                		return each_path
 		return None
 	def get_story_text(self):
 		# this is what you call when you want to get story text from the element
 		story_to_use = self.choose_path()
+		print(story_to_use)
 		if story_to_use is not None:
-			text_to_display = getattr(self,story_to_use+"Story_Content")
-			effects_to_enact = getattr(self,story_to_use+"Effects")
-			return [text_to_display, effects_to_enact]
+			text_to_display = getattr(self,story_to_use)["Story_Content"]
+			effects_to_enact = getattr(self,story_to_use)["Effects"]
+			buttons_to_display = getattr(self,story_to_use)["Buttons"]
+			return [text_to_display, effects_to_enact, buttons_to_display]
 		else:
 			return None
 			
@@ -253,10 +302,18 @@ class StoryElement:
 	def make_lists(self):
 		if self.paths is not None:
 			self.paths = self.paths.split(",")
-	def layout_destinations(self):
-		# this looks at the current keys available for displaying locations
-		# it designates a single key as the "scroll through sets" key
-
+		for each_attribute in dir(self):
+			if re.search("button",str(each_attribute), re.IGNORECASE):
+				self.each_attribute = self.each_attribute.split(";")
+				temp_dict = {}
+				for each_item in self.each_attribute:
+					[key_id,text] = each_item.split("|")
+					temp_dict[key_id] = text
+				if temp_dict is not {}:
+					self.each_attribute = temp_dict
+		valueof = lambda x: getattr(self,each_pathname + x)
+		for each_pathname in self.paths:
+			self.each_pathname = {"Story_Content":valueof("_Story_Content"), "Effects":valueof("_Effects"), "Buttons":valueof("_Buttons")}
 		
 class AI_settings:
 	# this class will be used to set what the playstyles of the NPCs are	
@@ -296,6 +353,7 @@ class Character:
 			self.location = target_node.Node_Name
 			target_node.NPCs.append(self.name)
 			current_node.NPCs.remove(self.name)
+			CURRENT_NODE[0] = target_node
 		# check that route between current and new location exists
 		# add character to list of characters in the new location
 		# remove character from list of characters in old location
@@ -310,10 +368,10 @@ class Character:
 
 		
 # this function will read in the environment nodes and store them as code objects
-def parse_node_file(filename, node_storage, type):
+def parse_node_file(filename, node_storage, node_type):
 	file = open(filename)
 	internal_check = 0
-	if type is "map":
+	if node_type is "map":
 		Node_type = Map
 		current_line = ""
 		for line in file:
@@ -327,18 +385,18 @@ def parse_node_file(filename, node_storage, type):
 				current_line = ""
 				internal_check += 1
 			current_line += line
-			print(current_line)
+			#print(current_line)
 			if re.search("\]",line):
 				name_search = re.search("\[(.+?):",current_line)
 				if name_search is None:
 					sys.exit("Your game file has no element name I can see")
 				current_name = name_search.group(1)
-				print("current name is "+str(current_name))
+			#	print("current name is "+str(current_name))
 				content_search = re.search(":(.+?)\]",current_line)
 				if content_search is None:
 					sys.exit("Your game file has no element content I can see")
 				current_text = content_search.group(1)
-				print("current content is "+str(current_text))
+			#	print("current content is "+str(current_text))
 				current_node.__setattr__(current_name, current_text)
 				internal_check -= 1
 			if re.search("}",line):
@@ -348,7 +406,7 @@ def parse_node_file(filename, node_storage, type):
 				internal_check -= 1
 				if internal_check is not 0:
 					sys.exit("Your game file has mismatched delimiters")
-	elif type is "story":
+	elif node_type is "story":
 		# HOLY WOW THIS IS BROKEN RIGHT NOW
 		Node_type = StoryElement
 		current_line = ""
@@ -365,18 +423,18 @@ def parse_node_file(filename, node_storage, type):
 				current_line = ""
 				internal_check += 1
 			current_line += line
-			print(current_line)
+			#print(current_line)
 			if re.search("\]",line):
 				name_search = re.search("\[(.+?):",current_line)
 				if name_search is None:
 					sys.exit("Your game file has no element name I can see")
 				current_name = name_search.group(1)
-				print("current name is "+str(current_name))
+				#print("current name is "+str(current_name))
 				content_search = re.search(":(.+?)\]",current_line)
 				if content_search is None:
 					sys.exit("Your game file has no element content I can see")
 				current_text = content_search.group(1)
-				print("current content is "+str(current_text))
+				#print("current content is "+str(current_text))
 				current_node.__setattr__(current_name, current_text)
 				internal_check -= 1
 			if re.search("}",line):
@@ -389,16 +447,23 @@ def parse_node_file(filename, node_storage, type):
 		
 
 # These are the settings for regular UI interaction buttons
-direction_combat_button_settings = Settings(width=BUTTON_WIDTH, height = BUTTON_HEIGHT, open_color = BUTTON_OPEN_COLOR, set_color = BUTTON_SET_COLOR, background_color = BUTTON_BACKGROUND_COLOR, border_width = BUTTON_BORDER_WIDTH)
+direction_combat_button_settings = Settings(width=BUTTON_WIDTH, height = BUTTON_HEIGHT, inactive_color = BUTTON_INACTIVE_COLOR, open_color = BUTTON_OPEN_COLOR, set_color = BUTTON_SET_COLOR, background_color = BUTTON_BACKGROUND_COLOR, border_width = BUTTON_BORDER_WIDTH)
+non_interactive_button_settings = Settings(width = BUTTON_WIDTH, height = BUTTON_HEIGHT, inactive_color = BUTTON_OPEN_COLOR, open_color = BUTTON_OPEN_COLOR, set_color = BUTTON_OPEN_COLOR, background_color = BUTTON_BACKGROUND_COLOR, border_width = BUTTON_BORDER_WIDTH)
 
-w_button = Button(x_pos = 255, y_pos = 362, button_settings = direction_combat_button_settings, map_text = "North", combat_text = "Heavy Attack", pygame_key_id = K_w)
-a_button = Button(x_pos = 130, y_pos = 393, button_settings = direction_combat_button_settings, map_text = "West", combat_text = "Roll Left", pygame_key_id = K_a)
-s_button = Button(x_pos = 255, y_pos = 393, button_settings = direction_combat_button_settings, map_text = "South", combat_text = "Light Attack", pygame_key_id = K_s)
-d_button = Button(x_pos = 375, y_pos = 393, button_settings = direction_combat_button_settings, map_text = "East", combat_text = "Roll Right", pygame_key_id = K_d)
-q_button = Button(x_pos = 130, y_pos = 362, button_settings = direction_combat_button_settings, map_text = "Examine", combat_text = "Block", pygame_key_id = K_q)
-f_button = Button(x_pos = 500, y_pos = 393, button_settings = direction_combat_button_settings, map_text = "Commit", combat_text = "Commit", pygame_key_id = K_f)
 
-BUTTONS.extend([w_button,a_button,s_button,d_button,q_button,f_button])
+w_button = Button(x_pos = 255, y_pos = 362, text = "North", button_settings = direction_combat_button_settings, pygame_key_id = K_w)
+a_button = Button(x_pos = 130, y_pos = 393, text = "West", button_settings = direction_combat_button_settings, pygame_key_id = K_a)
+s_button = Button(x_pos = 255, y_pos = 393, text = "South", button_settings = direction_combat_button_settings, pygame_key_id = K_s)
+d_button = Button(x_pos = 375, y_pos = 393, text = "East", button_settings = direction_combat_button_settings, pygame_key_id = K_d)
+q_button = Button(x_pos = 130, y_pos = 362, text = "Examine", button_settings = non_interactive_button_settings, pygame_key_id = K_q)
+f_button = Button(x_pos = 500, y_pos = 393, text = "Confirm", button_settings = non_interactive_button_settings, pygame_key_id = K_f)
+tab_button = Button(x_pos = 5, y_pos = 362, text = "Page", button_settings = non_interactive_button_settings, pygame_key_id = K_TAB)
+
+MOVEMENT_BUTTONS.extend([w_button,a_button,s_button,d_button])
+UI_BUTTONS.extend([f_button, tab_button, q_button])
+
+Main_Interface_Screen = Screen([10,10,600,200], background_color=BUTTON_BACKGROUND_COLOR, foreground_color=BUTTON_OPEN_COLOR, text_color=[0,0,0], border_width=10)
+SCREENS.append(Main_Interface_Screen)
 	
 # main strategy for game handling:
 # when you first enter a node, check to see if there's hostile NPCs present
@@ -417,20 +482,50 @@ BUTTONS.extend([w_button,a_button,s_button,d_button,q_button,f_button])
 # it's agnostic to what the buttons actually do or what's being displayed on screen
 # the buttons call handler functions that perform the proper actions mased on checking the combat_mode and map_mode flags
 
-def move_character(character, current_location, target_location):
-	# check that the character is in the location you're moving from
-	# check that it's possible for them to move to their target
-	# add them to the target location's list, remove them from the current location's list
-		
+def set_up_all_buttons(dict_of_buttons_to_change):
+	# this function takes a list of keys to change and the text they should be changed to, and changes them
+	# it sets all other buttons to be greyed out
+	# it expects a dict containing the button to change and the new text to assign to it
+	global MOVEMENT_BUTTONS
+	for each_key in dict_of_buttons_to_change: # each_key is an integer, representing the key ID
+		counter = 0
+		for each_button in MOVEMENT_BUTTONS: # each_button is an object of the Button class
+			if each_key == each_button.pygame_key_id:
+				# i need the index in movement buttons of the object wiht id == key
+				MOVEMENT_BUTTONS[counter].set_text(dict_of_buttons_to_change[each_key])
+			counter += 1
+	global update_count
+	update_count += 1
+
 def map_turn(action, target=None):
 	# map_turn() is the main non-combat function that controls the game.
 	# this function will perform movement by changing game state and switching player position in the map node collection
 	# it will also facilitate environment/npc interactions by invoking the story objects associated with the current map node
+	if action is not None:
+		print(action)
 	if map_mode == 0:
 		return None
 	if action == "move":
-		x=1
+		CURRENT_NODE[0].page_number = 0
 		#move player
+	
+		if len(CURRENT_NODE) is not 0: # ask the map what story elements it has, ask for a story
+			if CURRENT_NODE[0].Story_Element_Names is not None:
+				current_story_info = CURRENT_NODE[0].get_story_text()
+				text_to_draw = current_story_info[0]
+				effects_to_enact = current_story_info[1]
+				buttons_to_draw = current_story_info[2]
+				set_up_all_buttons(buttons_to_draw)
+				Main_Interface_Screen.draw_self(text_to_draw)
+				if effects_to_enact is not None:
+					effects_list = effects_to_enact.split(";")
+					for each_effect in effects_list:
+						exec(each_effect)
+			else:
+				text_to_draw = CURRENT_NODE[0].Descriptive_Text
+				Main_Interface_Screen.draw_self(text_to_draw)
+		else:
+			text_to_draw = "lol placeholder"
 	elif action == "examine" and target is None:
 		x=1
 		#examine the map node
@@ -440,27 +535,23 @@ def map_turn(action, target=None):
 	elif action == "inventory":
 		x=2
 		#open inventory menu
-	
-	if len(CURRENT_NODE) is not 0:
-		if CURRENT_NODE[0].Story_Element_Names is not None:
-			current_story_info = CURRENT_NODE[0].get_story_text()
-			text_to_draw = current_story_info[0]
-			effects_to_enact = current_story_info[1]
-		else:
-			text_to_draw = CURRENT_NODE[0].Descriptive_Text
-	else:
-		text_to_draw = "lol placeholder"
-	# ask the map node what the next story element is	
-	Main_Inferface_Screen.draw_self(text_to_draw)
-	if effects_to_enact is not None:
-		effects_list = effects_to_enact.split(";")
-		for each_effect in effects_list:
-			exec(each_effect)
+	elif action == "change page":
+		print("changing page")
+		CURRENT_NODE[0].turn_destinations_page()	
+		new_placenames = CURRENT_NODE[0].get_destinations()
+		set_up_all_buttons(new_placenames)
+
+	# figure out what buttons to draw
+
+	#Main_Interface_Screen.draw_self(text_to_draw) # this doesn't belong here yet, it's not appropriate
 
 def process_turn(combat_mode, map_mode, player_action = None, target = None, ready_mode = 0):
 	# ready_mode determines whether the player is ready for a game update
 	# if the player is ready, process_turn() invokes map_turn(), which either looks at the current map node (if it's a non-movement action that needs to be performed) for text to display, or moves the player and then looks to the map node
 	if combat_mode not in [0,1] or map_mode not in [0,1] or ready_mode not in [0,1] or combat_mode == map_mode:
+		print("map mode is "+str(map_mode))
+		print("combat mode is "+str(combat_mode))
+		print("ready_mode is "+str(ready_mode))
 		sys.exit("Your game control logic is faulty")
 	
 	if combat_mode is 1:
@@ -470,22 +561,30 @@ def process_turn(combat_mode, map_mode, player_action = None, target = None, rea
 	elif map_mode is 1 and ready_mode is 1:
 		map_turn(player_action, target)
 
-Main_Interface_Screen = Screen([10,10,600,200], background_color=BUTTON_BACKGROUND_COLOR, foreground_color=BUTTON_OPEN_COLOR, text_color=[0,0,0], border_width=10)
-SCREENS.append(Main_Interface_Screen)
 
-parse_node_file("map.txt",MAPS,type="map")
+
+Player = Character(name = "Player", location = None)
+
+parse_node_file("map.txt",MAPS,node_type="map")
 for each_map_node in MAPS:
 	if "Player" in each_map_node.NPCs:
 		CURRENT_NODE[0] = each_map_node
+		Player.location = CURRENT_NODE[0].Node_Name
+		Main_Interface_Screen.draw_self(each_map_node.Descriptive_Text)
+
 if CURRENT_NODE[0] is None:
 	sys.exit("You never defined a starting place for the player")
 
-parse_node_file("story_elements.txt",STORY_ELEMENTS,type="story")
+parse_node_file("story_elements.txt",STORY_ELEMENTS,node_type="story")
 
+starting_dests = CURRENT_NODE[0].get_destinations()
+#print(starting_dests)
+set_up_all_buttons(starting_dests)
 
 map_mode = 1
 combat_mode = 0
 ready_mode = 0
+target = None
 while exit_status is 0:
 	next_event = pygame.event.poll()
 	action = None
@@ -530,8 +629,15 @@ while exit_status is 0:
 	if next_event.type == KEYDOWN and next_event.key == K_z:
 		action = "examine"
 		# pull up the menu to choose an item
+	
+	if next_event.type == KEYDOWN and next_event.key == K_TAB:
+		print("tab seen")
+		action = "change page"
+		# pull up the menu to choose an item
+	if action is not None:
+		ready_mode = 1
 
-	process_turn(combat_mode, map_mode, action, target)
+	process_turn(combat_mode = combat_mode, map_mode = map_mode, player_action=action, target = target, ready_mode = ready_mode)
 	# process_turn() looks at the game state and decides what to do
 		
 	if update_count is not 0:

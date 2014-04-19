@@ -2,23 +2,10 @@
 [Node_Name:
 First_Encounter
 ]
-[Paths:]
-[Prerequisites:FirstPath:Foyer1=1]
-[Story_Content:FirstPath:You enter the dripping dungeon, wary of threats.]
-[Effects:FirstPath:None]
-[Keys:FirstPath:Commit]
+[Paths:FirstPath]
+[FirstPath_Prerequisites:Foyer1=1]
+[FirstPath_Story_Content:You enter the dripping dungeon, wary of threats.]
+[FirstPath_Effects:None]
+[FirstPath_Buttons:K_w|Cry;K_a|Sleep;K_s|Puke;K_d|JO (you sicko)]
 } # end node
 
-{ # start node
-[Node_Name:
-Example
-]
-[Prerequisites:FirstPath:]
-[Story_Content:FirstPath:]
-[Effects:FirstPath:]
-[Keys:FirstPath:]
-[Prerequisites:SecondPath:]
-[Story_Content:SecondPath:]
-[Effects:SecondPath:]
-[Keys:SecondPath:]
-} # end node
