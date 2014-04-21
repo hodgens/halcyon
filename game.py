@@ -220,6 +220,7 @@ class Map:
 		self.Destinations = None # expected to be a list
 		self.page_number = 0 # for deciding which destinations to display if you have too many
 		self.Story_Elements = None
+		self.Removed_Destinations = None
 
 	def __eq__(self, target):
 		if self.Node_Name == target:
@@ -473,7 +474,7 @@ SCREENS.append(Main_Interface_Screen)
 # check for player input, and when you detect player input, start figuring out NPC combat actions
 # apply actions, re-loop
 
-# if there's not hostile NPCs, then enter map mode
+# if there's not hostile NPCs, then enter map mode/
 # when you enter map mode, check the current map node, and look at its stories
 # find the youngest unlocked story element, display it (unless it has a display_once flag set)
 # if there are none, default to the basic node description
@@ -481,6 +482,27 @@ SCREENS.append(Main_Interface_Screen)
 # it calls the appropriate button based on the key input
 # it's agnostic to what the buttons actually do or what's being displayed on screen
 # the buttons call handler functions that perform the proper actions mased on checking the combat_mode and map_mode flags
+
+def remove_map_path(map_name, path_to_remove):
+	# this function is for use in story element effects
+	# it lets you remove the exits from a map node, for instance if you're locked in a dungeon or a tunnel collapsed
+	for each_node in MAPS:
+		if each_node.Node_Name is map_name:
+			each_Node.Removed_Destinations = [0 for each in range(each_node.Destinations.index(path_to_remove))]
+			each_Node.Removed_Destinations[each_node.Destinations.index(path_to_remove)] = path_to_remove
+			each_Node.Destinations[each_Node.Destinations.index(path_to_remove)] = ""
+			break
+
+def add_map_path(map_name, path_to_add):
+	# adds a path to the Destinations list
+	# if you give it something that's never been there before,
+	# if you give it a single string, add it to the end of the list
+	# if you give it a list of form [False, False, False, False, path_to_add], it inserts at that location
+	# if you give it something it's had before, it looks at Removed_Destinations and adds it back in in the same location
+	for each_node in MAPS:
+		if each_node.Node_Name is map_name:
+			if each_node.Removed_Destinations is not None and path_to_add in each_node.Removed_Destinations:
+				
 
 def set_up_all_buttons(dict_of_buttons_to_change):
 	# this function takes a list of keys to change and the text they should be changed to, and changes them
