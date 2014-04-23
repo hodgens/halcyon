@@ -214,12 +214,11 @@ class Map:
 		self.NPCs = None # expected to be a list of strings if present
 		self.Items = None
 		self.effects = None # if you want to do something like, the room takes away five health per turn
-		self.map_paths = None # expected to be a list of strings if present
 		self.Flags = None
 		self.Descriptive_Text = None
 		self.Destinations = None # expected to be a list
 		self.page_number = 0 # for deciding which destinations to display if you have too many
-		self.Story_Elements = None
+		self.Story_Element_Names = None
 		self.Removed_Destinations = None
 
 	def __eq__(self, target):
@@ -229,12 +228,20 @@ class Map:
 			return False
 
 	def make_lists(self):
-		if self.map_paths is not None:
-			self.map_paths = self.map_paths.split(",")
 		if self.Destinations is not None:
 			self.Destinations = self.Destinations.split(",")
 		if self.NPCs is not None:
 			self.NPCs = self.NPCs.split(",")
+		if self.Story_Element_Names is not None:
+			self.Story_Element_Names = self.Story_Element_Names.split(",")
+		if self.Flags is not None:
+			self.Flags = self.Flags.split(",")
+			for each_flag in self.Flags:
+				print(each_flag)
+				search = re.search("(.+)([=|<|>].+)",each_flag)
+				name = search.groups(0)[0]
+				value = search.groups(0)[1]
+				setattr(self, name, value)
 	
 	def get_destinations(self):
 		# since we can only display four directions at a time
@@ -245,7 +252,7 @@ class Map:
 		else:
 			start_point = 0 + self.page_number*len(MAP_DISPLAY_KEYS)
 			end_point = len(MAP_DISPLAY_KEYS) + self.page_number*len(MAP_DISPLAY_KEYS)
-			if end_point > len(self.Destinations):
+			if end_point >= len(self.Destinations):
 				end_point = len(self.Destinations)
 			names_to_return = self.Destinations[start_point:end_point]
 		while len(names_to_return) < len(MAP_DISPLAY_KEYS):
@@ -254,44 +261,73 @@ class Map:
 		return dict_to_return
 
 	def turn_destinations_page(self):
-		if len(self.Destinations) >= len(MAP_DISPLAY_KEYS) and len(self.Destinations) - self.page_number*len(MAP_DISPLAY_KEYS) < len(MAP_DISPLAY_KEYS):
-			self.page_number = 0
-		else:
-			self.page_number += 1
+		if len(self.Destinations) > len(MAP_DISPLAY_KEYS):
+			if len(self.Destinations) - self.page_number * len(MAP_DISPLAY_KEYS) > len(MAP_DISPLAY_KEYS):
+				self.page_number += 1
+			else:
+				self.page_number = 0
 
 	def get_text(self):
-		if self.Story_Elements is None:
+		if self.Story_Element_Names is None:
+			print("there are no stories")
 			return self.Descriptive_Text
-		for each_story in self.Story_Elements:
-			story_factors = each_story.get_story_text()
+		current_story = None
+		for each_story in self.Story_Element_Names:
+			for each_element in STORY_ELEMENTS:
+				print("checking "+str(each_element.Node_Name) +" against "+each_story)
+				if each_element.Node_Name == each_story:
+					current_story = each_element
+		if current_story is not None:
+			story_factors = current_story.get_story_text()
 			if story_factors is not None:
+				print("found story factors, returning")
+				print(story_factors)
 				return story_factors
+		print("returning default text")
 		return self.Descriptive_Text
 
 
 class StoryElement:
-	def __init__(self, element_name, paths = None):
-		self.element_name = element_name
-		self.paths = paths # is a list of the names of the paths
+	def __init__(self):
+		self.Node_Name = None
+		self.Paths = None # is a list of the names of the paths
 		# the story element keeps track of the paths and their prerequisites
 	def choose_path(self):
 		# this is an internal function that looks at the story's content and chooses which branch
-		if len(self.paths) is 1:
-			return self.paths[0]
-		evaluate_strings = lambda x: exec(x)
-		for each_path in self.paths:
-			if all([eval(each_string) for each_string in getattr(self,each_path+"_Prerequisites")]):
-            # the prerequisites are stored as strings, evaluate the strings
-                		return each_path
+		#if len(self.Paths) is 1:
+			#print("only one path")
+			#return self.Paths[0]
+		print("checking paths")
+		for each_path in self.Paths:
+			story_flags_to_evaluate = getattr(self,each_path+"_Prerequisites") # should be a list
+			if story_flags_to_evaluate is None:
+				print("no story flags to check")
+				return None
+			path_results = []
+			for each_flagset in story_flags_to_evaluate:
+				flag_location, flag_test = each_flagset.split(",")
+
+				for each_node in MAPS:
+					if each_node.Node_Name == flag_location:
+						flag_search = re.search("(.+?)[=|<|>|!]",flag_test)
+						flag_name = flag_search.groups(0)[0]
+						actual_flag_value = getattr(each_node,flag_name) 
+						exec(flag_name+actual_flag_value)
+						result = eval(flag_test)
+						path_results.append(result)
+		if path_results is not None:
+			if all(path_results) is True:
+				return each_path
 		return None
+
 	def get_story_text(self):
 		# this is what you call when you want to get story text from the element
 		story_to_use = self.choose_path()
 		print(story_to_use)
 		if story_to_use is not None:
-			text_to_display = getattr(self,story_to_use)["Story_Content"]
-			effects_to_enact = getattr(self,story_to_use)["Effects"]
-			buttons_to_display = getattr(self,story_to_use)["Buttons"]
+			text_to_display = getattr(self,story_to_use+"_Story_Content")
+			effects_to_enact = getattr(self,story_to_use+"_Effects")
+			buttons_to_display = getattr(self,story_to_use+"_Buttons")
 			return [text_to_display, effects_to_enact, buttons_to_display]
 		else:
 			return None
@@ -301,20 +337,26 @@ class StoryElement:
 		# if there's more than one, check the prerequisites for each
 		x=1
 	def make_lists(self):
-		if self.paths is not None:
-			self.paths = self.paths.split(",")
+		if self.Paths is not None:
+			self.Paths = self.Paths.split(",")
 		for each_attribute in dir(self):
 			if re.search("button",str(each_attribute), re.IGNORECASE):
-				self.each_attribute = self.each_attribute.split(";")
+				text_to_split = getattr(self,str(each_attribute))
+				split_text = text_to_split.split(";")
+				setattr(self,each_attribute,split_text)
 				temp_dict = {}
-				for each_item in self.each_attribute:
+				for each_item in split_text:
 					[key_id,text] = each_item.split("|")
 					temp_dict[key_id] = text
 				if temp_dict is not {}:
-					self.each_attribute = temp_dict
+					setattr(self,each_attribute,temp_dict)
 		valueof = lambda x: getattr(self,each_pathname + x)
-		for each_pathname in self.paths:
-			self.each_pathname = {"Story_Content":valueof("_Story_Content"), "Effects":valueof("_Effects"), "Buttons":valueof("_Buttons")}
+		if self.Paths is not None:
+			for each_pathname in self.Paths:
+				string_to_split = valueof("_Prerequisites")
+				prerequisite_list = string_to_split.split("|")
+				setattr(self,each_pathname+"_Prerequisites",prerequisite_list)
+				self.each_pathname = {"Story_Content":valueof("_Story_Content"), "Effects":valueof("_Effects"), "Buttons":valueof("_Buttons")}
 		
 class AI_settings:
 	# this class will be used to set what the playstyles of the NPCs are	
@@ -334,27 +376,31 @@ class Character:
 		self.flavor_text = None # characters hold their own flavor text
 		self.inventory = None
 	def move_character(self, new_location):
+		global CURRENT_NODE
 		current_node = None
 		taret_node = None
 		for each_location in MAPS:
 			if each_location.__eq__(self.location):
 				current_node = each_location
-			if each_location.__eq(new_location):
-				target_node = each_location
-		if current_node is None:
-			sys.exit("the character can't leave the formless void")
-		if target_node is None:
-			sys.exit("the character cannot enter the formless void")
+		#if current_node is None:
+			#sys.exit("the character can't leave the formless void")
+		# if new_location is None:
+		if new_location is not "":
+			#if new_location not in [each.Node_Name for each in MAPS]:
+				#sys.exit("the character cannot enter the formless void")
 
-		can_move = 0	
-		for each_path in current_node.exits:
-			if each_path == new_location:
-				can_move = 1
-		if can_move is not 0:
-			self.location = target_node.Node_Name
-			target_node.NPCs.append(self.name)
-			current_node.NPCs.remove(self.name)
-			CURRENT_NODE[0] = target_node
+			can_move = 0	
+			for each_path in current_node.Destinations:
+				if each_path == new_location:
+					can_move = 1
+			if can_move is not 0:
+				self.location = new_location
+				for each_location in MAPS:
+					if each_location.Node_Name == new_location:
+						each_location.NPCs.append(self.name)
+						CURRENT_NODE[0] = each_location
+					if each_location.Node_Name == self.location:
+						current_node.NPCs.remove(self.name)
 		# check that route between current and new location exists
 		# add character to list of characters in the new location
 		# remove character from list of characters in old location
@@ -412,11 +458,10 @@ def parse_node_file(filename, node_storage, node_type):
 		Node_type = StoryElement
 		current_line = ""
 		# HOW AM I GOING TO STORE THE MULTIPLE PATH INFORMATION?
-		# MAYBE BY MAKING A DICT WITH TUPLES AS THE VALUES?
 		for line in file:
 			line = line.rstrip('\n')
 			if re.search("{",line):
-				current_node = Map()
+				current_node = Node_type()
 				internal_check += 1
 			if re.search("\[",line):
 				current_text = ""
@@ -493,7 +538,7 @@ def remove_map_path(map_name, path_to_remove):
 			each_Node.Destinations[each_Node.Destinations.index(path_to_remove)] = ""
 			break
 
-def add_map_path(map_name, path_to_add):
+def add_map_path(map_name, path_to_add, insertion_point = None):
 	# adds a path to the Destinations list
 	# if you give it something that's never been there before,
 	# if you give it a single string, add it to the end of the list
@@ -502,6 +547,8 @@ def add_map_path(map_name, path_to_add):
 	for each_node in MAPS:
 		if each_node.Node_Name is map_name:
 			if each_node.Removed_Destinations is not None and path_to_add in each_node.Removed_Destinations:
+				x=1
+	# insertion point lets you add to a specific location where there is a None pathway leaving a Map Node
 				
 
 def set_up_all_buttons(dict_of_buttons_to_change):
@@ -519,6 +566,23 @@ def set_up_all_buttons(dict_of_buttons_to_change):
 	global update_count
 	update_count += 1
 
+def change_dest_names(list_to_modify):
+	new_list = {}
+	for each in list_to_modify.keys():
+		if each is K_w:
+			new_name = "move_up"
+		elif each is K_a:
+			new_name = "move_left"
+		elif each is K_s:
+			new_name = "move_down"
+		elif each is K_d:
+			new_name = "move_right"
+		else:
+			sys.exit("That's not a direction")
+		value = list_to_modify[each]
+		new_list[new_name] = value
+	return new_list
+
 def map_turn(action, target=None):
 	# map_turn() is the main non-combat function that controls the game.
 	# this function will perform movement by changing game state and switching player position in the map node collection
@@ -527,25 +591,39 @@ def map_turn(action, target=None):
 		print(action)
 	if map_mode == 0:
 		return None
-	if action == "move":
-		CURRENT_NODE[0].page_number = 0
+	possible_directions = ["move_up","move_left","move_down","move_right"] 
+	if action in possible_directions:
+		current_destinations = CURRENT_NODE[0].get_destinations() # returns a dict of keyname/destname
+		CURRENT_NODE[0].page_number = 0 # clean up the paging before you leave
 		#move player
+		renamed_dests = change_dest_names(current_destinations)
+		
+		Player.move_character(renamed_dests[action])
 	
 		if len(CURRENT_NODE) is not 0: # ask the map what story elements it has, ask for a story
 			if CURRENT_NODE[0].Story_Element_Names is not None:
-				current_story_info = CURRENT_NODE[0].get_story_text()
-				text_to_draw = current_story_info[0]
-				effects_to_enact = current_story_info[1]
-				buttons_to_draw = current_story_info[2]
-				set_up_all_buttons(buttons_to_draw)
-				Main_Interface_Screen.draw_self(text_to_draw)
-				if effects_to_enact is not None:
-					effects_list = effects_to_enact.split(";")
-					for each_effect in effects_list:
-						exec(each_effect)
+				current_story_info = CURRENT_NODE[0].get_text()
+				print(len(current_story_info))
+				print(type(current_story_info))
+				if type(current_story_info) is not list:
+					text_to_draw = CURRENT_NODE[0].Descriptive_Text
+
+					Main_Interface_Screen.draw_self(text_to_draw)
+				else:
+					text_to_draw = current_story_info[0]
+					effects_to_enact = current_story_info[1]
+					buttons_to_draw = current_story_info[2]
+					set_up_all_buttons(buttons_to_draw)
+					Main_Interface_Screen.draw_self(text_to_draw)
+					if effects_to_enact is not None:
+						effects_list = effects_to_enact.split(";")
+						for each_effect in effects_list:
+							exec(each_effect)
 			else:
 				text_to_draw = CURRENT_NODE[0].Descriptive_Text
 				Main_Interface_Screen.draw_self(text_to_draw)
+			new_buttons = CURRENT_NODE[0].get_destinations()
+			set_up_all_buttons(new_buttons)
 		else:
 			text_to_draw = "lol placeholder"
 	elif action == "examine" and target is None:
@@ -562,6 +640,7 @@ def map_turn(action, target=None):
 		CURRENT_NODE[0].turn_destinations_page()	
 		new_placenames = CURRENT_NODE[0].get_destinations()
 		set_up_all_buttons(new_placenames)
+		# TO DO LATER:  have it change the buttons to be "open"
 
 	# figure out what buttons to draw
 
@@ -656,8 +735,11 @@ while exit_status is 0:
 		print("tab seen")
 		action = "change page"
 		# pull up the menu to choose an item
-	if action is not None:
-		ready_mode = 1
+
+	if next_event.type == KEYDOWN and next_event.key == K_f:
+		print("confirm seen")
+	
+	ready_mode=1
 
 	process_turn(combat_mode = combat_mode, map_mode = map_mode, player_action=action, target = target, ready_mode = ready_mode)
 	# process_turn() looks at the game state and decides what to do

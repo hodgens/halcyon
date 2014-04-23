@@ -4,11 +4,11 @@
 [Type:Map]
 [Node_Name:Foyer]
 [Descriptive_Text:The entrance to the dungeon]
-[Flags:Foyer1=1]
+[Flags:Foyer1=1,Foyer2=1]
 [Story_Element_Names:None]
 [Items:None]
 [NPCs:Player]
-[Destinations:Dungeon,Wast,Sith,Euste,Fart,Kitchen,Go Away,Cemetary]
+[Destinations:Dungeon,Wast,Sith,Euste,Fart,Kitchen,Go Away,Cemetary,Jerk,Butt,,Meanie]
 }
 
 { # start node
@@ -27,18 +27,18 @@ Test1=1,
 Test2=4,
 NPC_story1=1,
 NPC_story2=0,
-NPC_story3=0,
+NPC_story3=0
 ]
 
 [Story_Element_Names:
-First_Encounter
+First_Encounter,Second_Encounter
 ]
 
 
 [NPCs:
 Bob
 ]
-[Destinations:Foyer]
+[Destinations:,,Foyer]
 } # end node
 
 

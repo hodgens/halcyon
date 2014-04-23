@@ -3,9 +3,10 @@
 First_Encounter
 ]
 [Paths:FirstPath]
-[FirstPath_Prerequisites:Foyer1=1]
+[FirstPath_Prerequisites:Foyer,Foyer1==1|Foyer,Foyer2==1]
 [FirstPath_Story_Content:You enter the dripping dungeon, wary of threats.]
 [FirstPath_Effects:None]
 [FirstPath_Buttons:K_w|Cry;K_a|Sleep;K_s|Puke;K_d|JO (you sicko)]
+[FirstPath_Confirm:Yes]
 } # end node
 
