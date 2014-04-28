@@ -7,6 +7,7 @@ from settings import *
 # let's get the PyGame initialization out of the way
 (numberpassed, numberfailed) = pygame.init()
 
+print("initiating main screen")
 main_screen = pygame.display.set_mode( [SCREEN_WIDTH, SCREEN_HEIGHT] )
 exit_status = 0 # for quitting the main loop
 center_box = pygame.Surface([SCREEN_WIDTH, SCREEN_HEIGHT])
@@ -24,17 +25,38 @@ test_attribute = 14
 #environment_file = open(sys.argv[1])
 NPC_LIST = []
 MOVEMENT_BUTTONS = []
-UI_BUTTONS = [] 
+UI_BUTTONS = []
 SCREENS = []
 MAPS = []
 CURRENT_NODE = [None]
 STORY_ELEMENTS = []
-MAP_DISPLAY_KEYS = [K_w, K_a, K_s, K_d]
+MAP_DISPLAY_KEYS = [K_w,K_a,K_s,K_d]
 page_count = 0
 
 # Start up the font object for text display
+print("setting up font")
 pygame.font.init()
 Text_font = pygame.font.SysFont("C:\Windows\Fonts\04B_19_.TTF",FONT_SIZE)
+
+BUTTON_CONFIRM_SETTINGS = {each:"" for each in [K_w,K_a,K_s,K_d,K_1,K_2,K_3,K_4,K_r,K_e,K_q]}
+BUTTON_CONFIRM_SETTINGS[K_f] = "Continue"
+
+ALL_BUTTONS = []
+ALL_BUTTONS.extend(UI_BUTTONS)
+ALL_BUTTONS.extend(MOVEMENT_BUTTONS)
+
+def blank_all_buttons():
+	for each_button in ALL_BUTTONS:
+		each_button.set_text("")
+
+def wait_for_confirm():
+	move_on_status = 0
+	while move_on_status is 0:
+		next_event = pygame.event.poll()
+		if next_event == pygame.NOEVENT:
+			continue
+		if next_event.type == KEYDOWN and next_event.key == K_f:
+			move_on_status = 1
 
 class Settings:
 	# this class will define the settings for buttons, so they can be reused easily
@@ -89,6 +111,8 @@ class Button:
 		self.button_text_image = Text_font.render(text_to_use,1,self.background_color)
 		self.button_surface.blit(self.button_text_image,[self.width/2-text_dimensions[0]/2,self.height/2-text_dimensions[1]/2])
 		main_screen.blit(self.button_surface,(self.x_pos,self.y_pos))
+		global update_count
+		update_count += 1
 				
 
 	def change_status(self, new_status): # this is used to switch between the "open" and "set" cases for drawing buttons
@@ -136,9 +160,9 @@ class Screen:
 		self.screen_image = pygame.Surface((self.width,self.height))
 		self.screen_image.fill(self.background_color)
 		self.screen_image.fill(self.foreground_color, self.inner_dimensions_and_position)
-		# dimensions expect 
-		#self.draw_self(1,0)
 		main_screen.blit(self.screen_image,(self.x_pos,self.y_pos))
+		self.text_image = None
+		self.text_window_position = self.inner_dimensions
 		
 	def check_length(self, text, image_width):
 		text_size = Text_font.size(text)
@@ -150,6 +174,7 @@ class Screen:
 
 	def wrap_text(self, text, image_width):
 		# take in text, return a list of wrapped text
+		# TODO: MAKE IT BREAK THE LINE ON NEWLINE CHARACTERS
 		wrapped_text = []
 		if self.check_length(text, image_width) is True:
 			wrapped_text.append(text)
@@ -184,28 +209,140 @@ class Screen:
 		else:
 			sys.exit("You tried to reference a character that doesn't exist")
 		
-	def display_text(self, text):
+	def display_text(self, text, replace_mode=True):
 		# this is the function you call when you want to tell a screen to display a piece of text
 		# you don't call it directly, though, you tell the screen to use draw_self() and it looks at the current game state and the map node's story elements
+		# mode is for whether you add or replace
+		lines_to_display = None
+		if text is None or text is "" or text is []:
+			print("there's nothing to draw")
+			return None
 		lines_to_display = self.wrap_text(text,self.width - 4*self.border_width)
-		if lines_to_display is not None:
-			line_counter = 0
-			self.text_image = pygame.Surface([self.width - 2*self.border_width, self.height - 2*self.border_width])
-			for each_line in lines_to_display:
-				line_image = Text_font.render(each_line,1,self.background_color)
-				line_dimensions = Text_font.size(each_line)
-				self.text_image.blit(line_image, [Text_font.get_linesize(), Text_font.get_linesize() + line_counter * Text_font.get_linesize()])
-				line_counter += 1
-			self.screen_image.fill(self.foreground_color)
-			self.screen_image.blit(self.text_image,self.inner_dimensions_and_position)
+		print(len(lines_to_display)*Text_font.get_linesize())
+
+		if lines_to_display is not None: 
+			print("replace mode is "+str(replace_mode))
+			print(type(replace_mode))
+			if replace_mode == "True" or replace_mode is True: # replace the whole text image with a new one
+				new_height = len(lines_to_display)*Text_font.get_linesize()
+				print(new_height)
+				image_height = self.screen_image.get_height() - 2*self.border_width
+				print(image_height)
+				if new_height > image_height:
+					length_to_use = len(lines_to_display)*Text_font.get_linesize()
+					print("conditional worked")
+				else:
+					length_to_use = self.screen_image.get_height()-2*self.border_width
+					print("conditional failed")
+				self.text_image = pygame.Surface([self.width - 2*self.border_width, length_to_use])
+				print("new height is "+str(self.text_image.get_height()))
+				line_counter = 0
+				for each_line in lines_to_display:
+					line_image = Text_font.render(each_line,1,self.background_color)
+					self.text_image.blit(line_image, [Text_font.get_linesize(), Text_font.get_linesize() + line_counter * Text_font.get_linesize()])
+					line_counter += 1
+
+			elif replace_mode == "False" or replace_mode is False: # add the new text to the existing text image
+				print("height is "+str(2*len(lines_to_display)*Text_font.get_linesize()))
+				print(self.screen_image.get_height())
+				if len(lines_to_display)*Text_font.get_linesize() + self.text_image.get_height() > self.screen_image.get_height() - 2*self.border_width:
+					length_to_use = self.screen_,mage.get_height() - 2*self.border_width
+				else:
+					length_to_use = len(lines_to_display)*Text_font.get_linesize() + self.text_image.get_height()
+				temporary_surface = pygame.Surface([self.width - 2*self.border_width, length_to_use])
+				temporary_surface.blit(source = self.text_image,dest=(0,0))
+				line_counter = 0
+				for each_line in lines_to_display:
+					line_image = Text_font.render(each_line,1,self.background_color)
+					temporary_surface.blit(line_image,[Text_font.get_linesize(),self.text_image.get_height()+Text_font.get_linesize() + line_counter*Text_font.get_linesize()])
+					line_counter += 1
+				self.text_image = temporary_surface
+
+			print(self.text_image.get_height())
+			self.screen_image.fill(self.background_color)
+			self.screen_image.fill(self.foreground_color, self.inner_dimensions_and_position)
+			self.screen_image.blit(self.text_image,dest=self.inner_dimensions_and_position, area = self.text_window_position)
+			global update_count
+			update_count += 1
 	
-	def draw_self(self, text_to_draw):
+
+	def draw_self(self, text_to_draw,confirm_mode=False,replace_mode=False):
 		# this takes text, renders it using internal functions, pastes it on the screen, and tells the game to update the screen
-		self.display_text(text_to_draw)
+		# mode can be add or replace
+		global update_count
+
+		confirm_break_search = text_to_draw.split("****")
+		# draw the text, then wait_for_confirm() before sending the next one
+		if len(confirm_break_search) is 1:
+			self.display_text(text_to_draw,replace_mode=replace_mode)
+			update_count += 1
+			main_screen.blit(self.screen_image,(self.x_pos,self.y_pos))
+			pygame.display.flip() #flip updates the main_screen to the actual displayscreen
+			if confirm_mode is True:
+				wait_for_confirm()
+		else:
+			for each_segment in confirm_break_search:
+				self.display_text(each_segment,replace_mode=replace_mode)
+				update_count += 1
+				main_screen.blit(self.screen_image,(self.x_pos,self.y_pos))
+				pygame.display.flip() #flip updates the main_screen to the actual displayscreen
+				if confirm_mode is True:
+					wait_for_confirm()
+
+	def scroll(self,direction, amount):
+		# bli the text image using an altered area argument to the normal destination argument
+		# adjust the position of the area up or down by a certain amount
+		# amount should be either "small","large","full"
+		# full is eqvuialent to a home/end command
+		# short is a shorter move, like an arrow key hit
+		# large is like a pageup/pagedown hit
+		# use t/g as small, v/b as large, y/h as full?
+
+		#self.inner_dimensions = [topleft x coord, topleft y coord, bottom right x coord, bottom right y coord]
+
+		print("scrolling " + direction + " by amount " + amount)
+		if amount == "small":
+			# make this three line heights
+			skip = 3*Text_font.get_linesize()
+		elif amount == "large":
+			# make this 80% of a full screen height
+			skip = round(0.8*(self.text_window_position[3]-self.text_window_position[1]))
+		elif amount == "full":
+			# make this the full height of the text_image
+			if direction == "down":
+				skip = self.text_image.get_height() - self.text_window_position[3]
+			elif direction == "up":
+				skip = self.text_window_position[1]
+		print(self.text_window_position)
+		print("skip is "+str(skip))
+
+		# clamp to lower image border (upper image coordinates)
+		if self.text_window_position[3] + skip > self.text_image.get_height() and direction == "down":
+			# if applying the skip puts the lower border out of bounds of the text image
+			skip = self.text_image.get_height() - self.text_window_position[3]
+			print("clamping to lower border")
+		# clam to upper image border (lower image coordinates)
+		if self.text_window_position[1] - skip < 0 and direction == "up":
+			skip = self.text_window_position[1]
+			print("clamping to upper border")
+
+		if direction == "up":
+			self.text_window_position[1] -= skip
+			self.text_window_position[3] -= skip
+		elif direction == "down":
+			self.text_window_position[1] += skip
+			self.text_window_position[3] += skip
+
+		print("text window position is "+str(self.text_window_position))
+
+		# now we actually move the text
+		self.screen_image.fill(self.foreground_color)
+		self.screen_image.blit(source=self.text_image,dest=self.inner_dimensions_and_position, area = self.text_window_position)
+
 		global update_count
 		update_count += 1
 		main_screen.blit(self.screen_image,(self.x_pos,self.y_pos))
-		# put together a scroll widget that I can use to inform the screen of how to position the text
+		pygame.display.flip()
 	
 class Map:
 	def __init__(self):
@@ -213,7 +350,7 @@ class Map:
 		self.Node_Name = None
 		self.NPCs = None # expected to be a list of strings if present
 		self.Items = None
-		self.effects = None # if you want to do something like, the room takes away five health per turn
+		self.effects = None # if you want something like, the room takes away five health per turn
 		self.Flags = None
 		self.Descriptive_Text = None
 		self.Destinations = None # expected to be a list
@@ -238,9 +375,7 @@ class Map:
 			self.Flags = self.Flags.split(",")
 			for each_flag in self.Flags:
 				print(each_flag)
-				search = re.search("(.+)([=|<|>].+)",each_flag)
-				name = search.groups(0)[0]
-				value = search.groups(0)[1]
+				name,value = each_flag.split("=")
 				setattr(self, name, value)
 	
 	def get_destinations(self):
@@ -281,7 +416,7 @@ class Map:
 			story_factors = current_story.get_story_text()
 			if story_factors is not None:
 				print("found story factors, returning")
-				print(story_factors)
+				#print(story_factors)
 				return story_factors
 		print("returning default text")
 		return self.Descriptive_Text
@@ -306,13 +441,13 @@ class StoryElement:
 			path_results = []
 			for each_flagset in story_flags_to_evaluate:
 				flag_location, flag_test = each_flagset.split(",")
-
 				for each_node in MAPS:
 					if each_node.Node_Name == flag_location:
 						flag_search = re.search("(.+?)[=|<|>|!]",flag_test)
 						flag_name = flag_search.groups(0)[0]
 						actual_flag_value = getattr(each_node,flag_name) 
-						exec(flag_name+actual_flag_value)
+						print(flag_name)
+						exec(flag_name+"="+actual_flag_value)
 						result = eval(flag_test)
 						path_results.append(result)
 		if path_results is not None:
@@ -328,14 +463,16 @@ class StoryElement:
 			text_to_display = getattr(self,story_to_use+"_Story_Content")
 			effects_to_enact = getattr(self,story_to_use+"_Effects")
 			buttons_to_display = getattr(self,story_to_use+"_Buttons")
-			return [text_to_display, effects_to_enact, buttons_to_display]
+			confirm_status = getattr(self,story_to_use+"_Confirm")
+			replace_status = getattr(self,story_to_use+"_Replace")
+			return [text_to_display, effects_to_enact, buttons_to_display, confirm_status,replace_status]
 		else:
 			return None
 			
 		# look at your stored story paths
 		# if there's only one, then do the appropriate stuff: send the text to the screen, modify buttons, change game state, etc
 		# if there's more than one, check the prerequisites for each
-		x=1
+
 	def make_lists(self):
 		if self.Paths is not None:
 			self.Paths = self.Paths.split(",")
@@ -375,20 +512,21 @@ class Character:
 		self.character_image = None
 		self.flavor_text = None # characters hold their own flavor text
 		self.inventory = None
+
 	def move_character(self, new_location):
+		print("moving to "+str(new_location))
 		global CURRENT_NODE
 		current_node = None
 		taret_node = None
+		destination_is_present = False
 		for each_location in MAPS:
 			if each_location.__eq__(self.location):
 				current_node = each_location
-		#if current_node is None:
-			#sys.exit("the character can't leave the formless void")
-		# if new_location is None:
+			if each_location.__eq__(new_location):
+				destination_is_present = True
+		if destination_is_present is False:
+			return None
 		if new_location is not "":
-			#if new_location not in [each.Node_Name for each in MAPS]:
-				#sys.exit("the character cannot enter the formless void")
-
 			can_move = 0	
 			for each_path in current_node.Destinations:
 				if each_path == new_location:
@@ -508,6 +646,7 @@ tab_button = Button(x_pos = 5, y_pos = 362, text = "Page", button_settings = non
 MOVEMENT_BUTTONS.extend([w_button,a_button,s_button,d_button])
 UI_BUTTONS.extend([f_button, tab_button, q_button])
 
+print("setting up main text display")
 Main_Interface_Screen = Screen([10,10,600,200], background_color=BUTTON_BACKGROUND_COLOR, foreground_color=BUTTON_OPEN_COLOR, text_color=[0,0,0], border_width=10)
 SCREENS.append(Main_Interface_Screen)
 	
@@ -556,6 +695,7 @@ def set_up_all_buttons(dict_of_buttons_to_change):
 	# it sets all other buttons to be greyed out
 	# it expects a dict containing the button to change and the new text to assign to it
 	global MOVEMENT_BUTTONS
+	global UI_BUTTONS
 	for each_key in dict_of_buttons_to_change: # each_key is an integer, representing the key ID
 		counter = 0
 		for each_button in MOVEMENT_BUTTONS: # each_button is an object of the Button class
@@ -565,6 +705,7 @@ def set_up_all_buttons(dict_of_buttons_to_change):
 			counter += 1
 	global update_count
 	update_count += 1
+	pygame.display.flip()
 
 def change_dest_names(list_to_modify):
 	new_list = {}
@@ -583,22 +724,27 @@ def change_dest_names(list_to_modify):
 		new_list[new_name] = value
 	return new_list
 
-def map_turn(action, target=None):
+
+
+def map_turn(player_action=None, target=None, ready_mode=0):
 	# map_turn() is the main non-combat function that controls the game.
 	# this function will perform movement by changing game state and switching player position in the map node collection
 	# it will also facilitate environment/npc interactions by invoking the story objects associated with the current map node
-	if action is not None:
+	if ready_mode is 0 and player_action is not "change page":
+		return None
+	if player_action is not None:
 		print(action)
 	if map_mode == 0:
 		return None
 	possible_directions = ["move_up","move_left","move_down","move_right"] 
-	if action in possible_directions:
+	if player_action in possible_directions:
 		current_destinations = CURRENT_NODE[0].get_destinations() # returns a dict of keyname/destname
+		print(current_destinations)
 		CURRENT_NODE[0].page_number = 0 # clean up the paging before you leave
 		#move player
 		renamed_dests = change_dest_names(current_destinations)
-		
-		Player.move_character(renamed_dests[action])
+
+		Player.move_character(renamed_dests[player_action])
 	
 		if len(CURRENT_NODE) is not 0: # ask the map what story elements it has, ask for a story
 			if CURRENT_NODE[0].Story_Element_Names is not None:
@@ -608,34 +754,52 @@ def map_turn(action, target=None):
 				if type(current_story_info) is not list:
 					text_to_draw = CURRENT_NODE[0].Descriptive_Text
 
-					Main_Interface_Screen.draw_self(text_to_draw)
+					Main_Interface_Screen.draw_self(text_to_draw,confirm_mode=False,replace_mode=True)
 				else:
 					text_to_draw = current_story_info[0]
 					effects_to_enact = current_story_info[1]
 					buttons_to_draw = current_story_info[2]
+					confirm_status = current_story_info[3]
+					replace_status = current_story_info[4]
 					set_up_all_buttons(buttons_to_draw)
-					Main_Interface_Screen.draw_self(text_to_draw)
+					Main_Interface_Screen.draw_self(text_to_draw,replace_mode=replace_status,confirm_mode =confirm_status)
 					if effects_to_enact is not None:
 						effects_list = effects_to_enact.split(";")
 						for each_effect in effects_list:
-							exec(each_effect)
+							attribute_set_search = re.search("(.+?),(.+?)=(.+)",each_effect)
+							if attribute_set_search is not None:
+								name = attribute_set_search.groups()[0]
+								varname = attribute_set_search.groups()[1]
+								value = attribute_set_search.groups()[2]
+								for each_map in MAPS:
+									if each_map.Node_Name == name:
+										setattr(each_map, varname, value)
+							if "(" in each_effect:
+								exec(each_effect)
+					# set all buttons to be blank except the Confirm button
+					pygame.display.flip() #flip updates the main_screen to the actual displayscreen
+					if confirm_status is True:
+						set_up_all_buttons(BUTTON_CONFIRM_SETTINGS)
+						pygame.display.flip() #flip updates the main_screen to the actual displayscreen
+						wait_for_confirm()
+				
 			else:
 				text_to_draw = CURRENT_NODE[0].Descriptive_Text
-				Main_Interface_Screen.draw_self(text_to_draw)
+				Main_Interface_Screen.draw_self(text_to_draw,replace_mode=True,confirm_status=False)
 			new_buttons = CURRENT_NODE[0].get_destinations()
 			set_up_all_buttons(new_buttons)
 		else:
 			text_to_draw = "lol placeholder"
-	elif action == "examine" and target is None:
+	elif player_action == "examine" and target is None:
 		x=1
 		#examine the map node
-	elif action == "examine" and target is not None:
+	elif player_action == "examine" and target is not None:
 		x=2
 		#examine an object
-	elif action == "inventory":
+	elif player_action == "inventory":
 		x=2
 		#open inventory menu
-	elif action == "change page":
+	elif player_action == "change page":
 		print("changing page")
 		CURRENT_NODE[0].turn_destinations_page()	
 		new_placenames = CURRENT_NODE[0].get_destinations()
@@ -646,7 +810,7 @@ def map_turn(action, target=None):
 
 	#Main_Interface_Screen.draw_self(text_to_draw) # this doesn't belong here yet, it's not appropriate
 
-def process_turn(combat_mode, map_mode, player_action = None, target = None, ready_mode = 0):
+def process_turn(combat_mode, map_mode, player_action = None, target = None, ready_mode =0):
 	# ready_mode determines whether the player is ready for a game update
 	# if the player is ready, process_turn() invokes map_turn(), which either looks at the current map node (if it's a non-movement action that needs to be performed) for text to display, or moves the player and then looks to the map node
 	if combat_mode not in [0,1] or map_mode not in [0,1] or ready_mode not in [0,1] or combat_mode == map_mode:
@@ -659,93 +823,125 @@ def process_turn(combat_mode, map_mode, player_action = None, target = None, rea
 		x=1
 		# get all present entities from the current map node
 		# pass them to combat_turn
-	elif map_mode is 1 and ready_mode is 1:
-		map_turn(player_action, target)
+	elif map_mode is 1 :
+		map_turn(player_action, target,ready_mode=ready_mode)
+
 
 
 
 Player = Character(name = "Player", location = None)
 
+confirm_mode = False
+replace_mode = True
+print("parsing map file")
 parse_node_file("map.txt",MAPS,node_type="map")
 for each_map_node in MAPS:
 	if "Player" in each_map_node.NPCs:
 		CURRENT_NODE[0] = each_map_node
 		Player.location = CURRENT_NODE[0].Node_Name
-		Main_Interface_Screen.draw_self(each_map_node.Descriptive_Text)
+		Main_Interface_Screen.draw_self(each_map_node.Descriptive_Text,confirm_mode=confirm_mode,replace_mode=replace_mode)
 
 if CURRENT_NODE[0] is None:
 	sys.exit("You never defined a starting place for the player")
 
+print("parsing story file")
 parse_node_file("story_elements.txt",STORY_ELEMENTS,node_type="story")
 
+print("setting up initial buttons")
 starting_dests = CURRENT_NODE[0].get_destinations()
-#print(starting_dests)
 set_up_all_buttons(starting_dests)
 
 map_mode = 1
 combat_mode = 0
-ready_mode = 0
+ready_mode = 1
 target = None
+action = None
+print("starting main game loop")
+def action_set(new_action):
+	# so you don't have a confirm hanging around for the next time you hit a button
+	global ready_mode
+	global action
+	#ready_search = re.compile('action.=."(\D.+?)"')
+	if new_action != action:
+		ready_mode = 0
+		action = new_action
+
 while exit_status is 0:
 	next_event = pygame.event.poll()
-	action = None
 	target = None
 	if next_event == pygame.NOEVENT:
 		continue
 	if next_event.type == KEYDOWN and next_event.key == K_ESCAPE:
 		exit_status = 1
-	if next_event.type == KEYDOWN and next_event.key == K_c:
-		center_box.fill((100,200,100))
-		main_screen.blit(center_box, (0,0))
 	if next_event.type == KEYDOWN and next_event.key == K_w:
 		w_button.change_status("set")
 		if map_mode == 1:
-			action = "move_up"
+			action_set("move_up")
 		elif combat_mode == 1:
-			action="light_attack"
+			action_set("light_attack")
 	if next_event.type == KEYDOWN and next_event.key == K_a:
 		a_button.change_status("set")
-		action = "move_left"	
+		action_set("move_left")
 	if next_event.type == KEYDOWN and next_event.key == K_s:
 		s_button.change_status("set")
 		if map_mode == 1:
-			action = "move_down"
+			action_set("move_down")
 		elif combat_mode == 1:
-			action = "heavy_attack"
+			action_set("heavy_attack")
 	if next_event.type == KEYDOWN and next_event.key == K_d:
 		d_button.change_status("set")
-		action = "move_right"	
+		action_set("move_right")
 	if next_event.type == KEYDOWN and next_event.key == K_q and combat_mode == 1:
 		q_button.change_status("set")
-		action = "block"
+		action_set("block")
 	if next_event.type == KEYDOWN and next_event.key == K_e and combat_mode == 1:
 		e_button.change_status("set")
-		action = "parry"
+		action_set("parry")
+	
+	# use t/g as small, v/b as large, y/h as full?
+	if next_event.type == KEYDOWN and next_event.key == K_t :
+		Main_Interface_Screen.scroll(direction = "up", amount = "small")
+	elif next_event.type == KEYDOWN and next_event.key == K_g :
+		Main_Interface_Screen.scroll(direction = "down", amount = "small")
+	elif next_event.type == KEYDOWN and next_event.key == K_v :
+		Main_Interface_Screen.scroll(direction = "up", amount = "large")
+	elif next_event.type == KEYDOWN and next_event.key == K_b :
+		Main_Interface_Screen.scroll(direction = "down", amount = "large")
+	elif next_event.type == KEYDOWN and next_event.key == K_y :
+		Main_Interface_Screen.scroll(direction = "up", amount = "full")
+	elif next_event.type == KEYDOWN and next_event.key == K_h :
+		Main_Interface_Screen.scroll(direction = "down", amount = "full")
 		
 	if next_event.type == KEYDOWN and next_event.key == K_x:
-		action = "examine_node"
+		action_set("examine_node")
 		# pop up menu to choose target
 		# call .get_most_recent_story(current_node) on the node
 	
 	if next_event.type == KEYDOWN and next_event.key == K_z:
-		action = "examine"
+		action_set("examine")
 		# pull up the menu to choose an item
 	
 	if next_event.type == KEYDOWN and next_event.key == K_TAB:
 		print("tab seen")
-		action = "change page"
+		action_set("change page")
 		# pull up the menu to choose an item
 
 	if next_event.type == KEYDOWN and next_event.key == K_f:
 		print("confirm seen")
+		ready_mode = 1
 	
-	ready_mode=1
-
-	process_turn(combat_mode = combat_mode, map_mode = map_mode, player_action=action, target = target, ready_mode = ready_mode)
+	if (action is not None and ready_mode is 1):
+		process_turn(combat_mode = combat_mode, map_mode = map_mode, player_action=action, target = target, ready_mode = ready_mode)
+		action = None
+	elif action is "change page":
+		process_turn(combat_mode = combat_mode, map_mode = map_mode, player_action=action, target = target, ready_mode =1)
+		action = None
+		
 	# process_turn() looks at the game state and decides what to do
 		
 	if update_count is not 0:
 		pygame.display.flip() #flip updates the main_screen to the actual displayscreen
 		update_count = 0
+		ready_mode = 0
 
 pygame.quit()

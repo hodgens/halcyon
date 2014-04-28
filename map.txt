@@ -18,7 +18,7 @@ Dungeon
 ]
 
 [Descriptive_Text:
-****A damp, chilly dungeon
+A damp, chilly dungeon
 ====You don't really like it here.
 ]
 
@@ -27,7 +27,8 @@ Test1=1,
 Test2=4,
 NPC_story1=1,
 NPC_story2=0,
-NPC_story3=0
+NPC_story3=0,
+FirstPath_Seen=0
 ]
 
 [Story_Element_Names:
