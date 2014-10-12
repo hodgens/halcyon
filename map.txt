@@ -1,45 +1,21 @@
-# If you want to make your directions fit a NWSE pattern on the WASD keys, order them that way.
-# WASD will be filled in the order that they're defined here.
 {
 [Type:Map]
-[Node_Name:Foyer]
-[Descriptive_Text:The entrance to the dungeon]
-[Flags:Foyer1=1,Foyer2=1]
+[Node_Name:Crashsite]
+[Descriptive_Text:You find yourself in an orange, glittering desert. Dunes surround you as far as you can see, and half-buried ships lie scattered around, poking out of the earth. ==== ====Two suns are visible in the sky, one high in the sky, the other just climbing the horizon.]
+[Flags:None]
 [Story_Element_Names:None]
 [Items:None]
 [NPCs:Player]
-[Destinations:Dungeon,Wast,Sith,Euste,Fart,Kitchen,Go Away,Cemetary,Jerk,Butt,,Meanie]
+[Destinations:Endless Desert]
 }
 
-{ # start node
+{
 [Type:Map]
-[Node_Name:
-Dungeon
-]
-
-[Descriptive_Text:
-A damp, chilly dungeon
-====You don't really like it here.
-]
-
-[Flags:
-Test1=1,
-Test2=4,
-NPC_story1=1,
-NPC_story2=0,
-NPC_story3=0,
-FirstPath_Seen=0
-]
-
-[Story_Element_Names:
-First_Encounter,Second_Encounter
-]
-
-
-[NPCs:
-Bob
-]
-[Destinations:,,Foyer]
-} # end node
-
-
+[Node_Name:Endless Desert]
+[Descriptive_Text:The road goes on for miles, and as you walk, the suns begin to set, your shadows lengthening into long streaks. Some of the half-buried remnants of ships begin to glow, wires hanging from their carcasses giving off an eerie turquoise light. You occasionally catch a glimpse of movement deep in the flickering shadows of the wrecks, but they do not come nearer.]
+[Flags:Intro_Seen=0]
+[Story_Element_Names:EnterTheWasteland,TheNextStep]
+[Items:None]
+[NPCs:None]
+[Destinations:,,Crashsite]
+}
